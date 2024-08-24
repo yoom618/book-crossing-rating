@@ -1,0 +1,279 @@
+import os
+import re
+from nltk import tokenize
+import numpy as np
+import pandas as pd
+from tqdm.auto import tqdm
+import torch
+from torch.utils.data import DataLoader, Dataset
+from transformers import AutoTokenizer, AutoModel
+from .basic_data import basic_data_split
+
+
+def text_preprocessing(summary):
+    """
+    Parameters
+    ----------
+    summary : pd.Series
+        정규화와 같은 기본적인 전처리를 하기 위한 텍스트 데이터를 입력합니다.
+    
+    Returns
+    -------
+    summary : pd.Series
+        전처리된 텍스트 데이터를 반환합니다.
+        베이스라인에서는 특수문자 제거, 공백 제거를 진행합니다.
+    """
+    summary = re.sub("[^0-9a-zA-Z.,!?]", " ", summary)  # .,!?를 제외한 특수문자 제거
+    summary = re.sub("\s+", " ", summary)  # 중복 공백 제거
+
+    return summary
+
+
+def text_to_vector(text, tokenizer, model):
+    """
+    Parameters
+    ----------
+    text : str
+        `summary_merge()`를 통해 병합된 요약 데이터
+    tokenizer : Tokenizer
+        텍스트 데이터를 `model`에 입력하기 위한 토크나이저
+    model : 사전학습된 언어 모델
+        텍스트 데이터를 벡터로 임베딩하기 위한 모델
+    ----------
+    """
+    for sent in tokenize.sent_tokenize(text):
+        text_ = "[CLS] " + sent + " [SEP]"
+        tokenized = tokenizer.tokenize(text_)
+        indexed = tokenizer.convert_tokens_to_ids(tokenized)
+        segments_idx = [1] * len(tokenized)
+        token_tensor = torch.tensor([indexed], device=model.device)
+        sgments_tensor = torch.tensor([segments_idx], device=model.device)
+        with torch.no_grad():
+            outputs = model(token_tensor, sgments_tensor)
+            encode_layers = outputs[0]
+            sentence_embedding = torch.mean(encode_layers[0], dim=0)
+    return sentence_embedding.cpu().detach().numpy()
+
+
+def process_text_data(ratings, users, books, tokenizer, model, vector_create=False):
+    """
+    Parameters
+    ----------
+    users : pd.DataFrame
+        유저 정보에 대한 데이터 프레임을 입력합니다.
+    books : pd.DataFrame
+        책 정보에 대한 데이터 프레임을 입력합니다.
+    vector_create : bool
+        사전에 텍스트 데이터 벡터화가 된 파일이 있는지 여부를 입력합니다.
+
+    Returns
+    -------
+    users_ : pd.DataFrame
+        각 유저가 읽은 책에 대한 요약 정보를 병합 및 벡터화하여 추가한 데이터 프레임을 반환합니다.
+    books_ : pd.DataFrame
+        텍스트 데이터를 벡터화하여 추가한 데이터 프레임을 반환합니다.
+    """
+    users_ = users.copy()
+    books_ = books.copy()
+    nan_value = 'None'
+    books_['summary'] = books_['summary'].fillna(nan_value)\
+                                         .apply(lambda x: text_preprocessing(x))\
+                                         .replace({'': nan_value, ' ': nan_value})
+    
+    books_['summary_length'] = books_['summary'].apply(lambda x:len(x))
+    books_['review_count'] = books_['isbn'].map(ratings['isbn'].value_counts())
+
+    users_['books_read'] = users_['user_id'].map(ratings.groupby('user_id')['isbn'].apply(list))
+
+    if vector_create:
+        if not os.path.exists('./data/text_vector'):
+            os.makedirs('./data/text_vector')
+
+        print('Create Item Summary Vector')
+        item_summary_vector_list = []
+        for title, summary in tqdm(zip(books_['book_title'], books_['summary']), total=len(books_)):
+            prompt_ = f'Book Title: {title}\n Summary: {summary}\n'
+            vector = text_to_vector(prompt_, tokenizer, model)
+            item_summary_vector_list.append(vector)
+        
+        item_summary_vector_list = np.concatenate([
+                                                   books_['isbn'].values.reshape(1, -1),
+                                                   np.array(item_summary_vector_list).reshape(1, -1)
+                                                  ]).T
+        
+        np.save('./data/text_vector/item_summary_vector.npy', item_summary_vector_list)
+        
+
+        print('Create User Summary Merge Vector')
+        user_summary_merge_vector_list = []
+        for books_read in tqdm(users_['books_read']):
+            read_books = books_[books_['isbn'].isin(books_read)]['book_title', 'summary', 'review_count']
+            read_books = read_books.sort_values('review_count', ascending=False).head(5)  # review_count가 높은 순으로 5개의 책을 선택
+            prompt_ = 'Five Books That You Read\n'
+            for idx, (title, summary) in enumerate(zip(read_books['book_title'], read_books['summary'])):
+                summary = summary if len(summary) < 100 else f'{summary[:100]} ...'
+                prompt_ += f'{idx}. Book Title: {title}\n Summary: {summary}\n'
+            vector = text_to_vector(prompt_, tokenizer, model)
+            user_summary_merge_vector_list.append(vector)
+        
+        user_summary_merge_vector_list = np.concatenate([
+                                                         users_['user_id'].values.reshape(1, -1),
+                                                         np.array(user_summary_merge_vector_list).reshape(1, -1)
+                                                        ]).T
+        
+        np.save('./data/text_vector/user_summary_merge_vector.npy', user_summary_merge_vector_list)        
+        
+    else:
+        print('Check Vectorizer')
+        print('Vector Load')
+        item_summary_vector_list = np.load('./data/text_vector/item_summary_vector.npy', allow_pickle=True)
+        user_summary_merge_vector_list = np.load('./data/text_vector/user_summary_merge_vector.npy', allow_pickle=True)
+
+    users_ = pd.merge(users_, pd.DataFrame(user_summary_merge_vector_list, 
+                                            columns=['user_id', 'user_summary_merge_vector']), on='user_id', how='left')
+    books_ = pd.merge(books_, pd.DataFrame(item_summary_vector_list,
+                                            columns=['isbn', 'item_summary_vector']), on='isbn', how='left')
+
+    return users_, books_
+
+
+class Text_Dataset(Dataset):
+    def __init__(self, user_book_vector, user_summary_vector, book_summary_vector, rating=None):
+        """
+        Parameters
+        ----------
+        user_book_vector : np.ndarray
+            벡터화된 유저와 책 데이터를 입렵합니다.
+        user_summary_vector : np.ndarray
+            벡터화된 유저에 대한 요약 정보 데이터를 입력합니다.
+        book_summary_vector : np.ndarray
+            벡터화된 책에 대한 요약 정보 데이터 입력합니다.
+        label : np.ndarray
+            정답 데이터를 입력합니다.
+        ----------
+        """
+        self.user_book_vector = user_book_vector
+        self.user_summary_vector = user_summary_vector
+        self.book_summary_vector = book_summary_vector
+        self.rating = rating
+    def __len__(self):
+        return self.user_book_vector.shape[0]
+    def __getitem__(self, i):
+        return {
+                'user_book_vector' : torch.tensor(self.user_book_vector[i], dtype=torch.long),
+                'user_summary_vector' : torch.tensor(self.user_summary_vector[i].reshape(-1, 1), dtype=torch.float32),
+                'book_summary_vector' : torch.tensor(self.item_summary_vector[i].reshape(-1, 1), dtype=torch.float32),
+                'rating' : torch.tensor(self.rating[i], dtype=torch.float32) if self.rating is not None else None,
+                }
+
+
+def text_data_load(args):
+    """
+    Parameters
+    ----------
+    args.data_path : str
+        데이터 경로를 설정할 수 있는 parser
+    args.pretained_model : str
+        사전학습된 모델을 설정할 수 있는 parser
+    args.vector_create : bool
+        텍스트 데이터 벡터화 및 저장 여부를 설정할 수 있는 parser
+        False로 설정하면 기존에 저장된 벡터를 불러옵니다.
+
+    Returns
+    -------
+    data : dict
+        학습 및 테스트 데이터가 담긴 사전 형식의 데이터를 반환합니다.
+    """
+    users = pd.read_csv(args.data_path + 'users.csv')
+    books = pd.read_csv(args.data_path + 'books.csv')
+    train = pd.read_csv(args.data_path + 'train_ratings.csv')
+    test = pd.read_csv(args.data_path + 'test_ratings.csv')
+    sub = pd.read_csv(args.data_path + 'sample_submission.csv')
+
+    tokenizer = AutoTokenizer.from_pretrained(args.pretained_model)
+    model = AutoModel.from_pretrained(args.pretained_model)
+    users_, books_ = process_text_data(train, users, books, tokenizer, model, args.vector_create)
+
+    # 유저 및 책 정보를 합쳐서 데이터 프레임 생성 (단, 베이스라인에서는 user_id, isbn, user_summary_merge_vector, item_summary_vector만 사용함)
+    user_features = []
+    book_features = []
+    features_col = list(set(['user_id', 'isbn'] + user_features + book_features))  # unique한 feature들만 추출
+    
+    train_df = train.merge(books_[book_features + ['isbn', 'item_summary_vector']], on='isbn', how='left')\
+                    .merge(users_[user_features + ['user_id', 'user_summary_merge_vector']], on='user_id', how='left')
+    test_df = test.merge(books_[book_features + ['isbn', 'item_summary_vector']], on='isbn', how='left')\
+                  .merge(users_[user_features + ['user_id', 'user_summary_merge_vector']], on='user_id', how='left')
+    all_df = pd.concat([train, test], axis=0)
+
+    # feature_cols의 데이터만 라벨 인코딩하고 인덱스 정보를 저장
+    label2idx, idx2label = {}, {}
+    for col in features_col:
+        unique_labels = all_df[col].astype("category").cat.categories
+        label2idx[col] = {label:idx for idx, label in enumerate(unique_labels)}
+        idx2label[col] = {idx:label for idx, label in enumerate(unique_labels)}
+        train_df[col] = train_df[col].astype("category").cat.codes
+        test_df[col] = test_df[col].astype("category").cat.codes
+
+    field_dims = [len(label2idx[col]) for col in features_col]
+
+    data = {
+            'train':train_df,
+            'test':test_df.drop(['rating'], axis=1),
+            'field_names':features_col,
+            'field_dims':field_dims,
+            'label2idx':label2idx,
+            'idx2label':idx2label,
+            'sub':sub,
+            }
+    
+    return data
+
+
+def text_data_split(args, data):
+    """학습 데이터를 학습/검증 데이터로 나누어 추가한 후 반환합니다."""
+    return basic_data_split(args, data)
+
+
+def text_data_loader(args, data):
+    """
+    Parameters
+    ----------
+    args.batch_size : int
+        데이터 batch에 사용할 데이터 사이즈
+    args.data_shuffle : bool
+        data shuffle 여부
+    args.test_size : float
+        Train/Valid split 비율로, 0일 경우에 대한 처리를 위해 사용
+    data : dict
+        text_data_load()에서 반환된 데이터
+
+    Returns
+    -------
+    data : dict
+        Text_Dataset 형태의 학습/검증/테스트 데이터를 DataLoader로 변환하여 추가한 후 반환합니다.
+    """
+    train_dataset = Text_Dataset(
+                                data['X_train'][data['field_names']].values,
+                                data['X_train']['user_summary_merge_vector'].values,
+                                data['X_train']['item_summary_vector'].values,
+                                data['y_train'].values
+                                )
+    valid_dataset = Text_Dataset(
+                                data['X_valid'][data['field_names']].values,
+                                data['X_valid']['user_summary_merge_vector'].values,
+                                data['X_valid']['item_summary_vector'].values,
+                                data['y_valid'].values
+                                ) if args.test_size != 0 else None
+    test_dataset = Text_Dataset(
+                                data['text_test'][data['field_names']].values,
+                                data['text_test']['user_summary_merge_vector'].values,
+                                data['text_test']['item_summary_vector'].values,
+                                )
+
+
+    train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=0, shuffle=args.data_shuffle)
+    valid_dataloader = DataLoader(valid_dataset, batch_size=args.batch_size, num_workers=0, shuffle=args.data_shuffle) if args.test_size != 0 else None
+    test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, num_workers=0, shuffle=False)
+    data['train_dataloader'], data['valid_dataloader'], data['test_dataloader'] = train_dataloader, valid_dataloader, test_dataloader
+    
+    return data

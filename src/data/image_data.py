@@ -1,0 +1,181 @@
+import numpy as np
+import pandas as pd
+from tqdm.auto import tqdm
+from PIL import Image
+import torchvision.transforms as transforms
+import torch
+from torch.utils.data import DataLoader, Dataset
+from .basic_data import basic_data_split
+
+
+class Image_Dataset(Dataset):
+    def __init__(self, user_book_vector, img_vector, rating=None):
+        """
+        Parameters
+        ----------
+        user_book_vector : np.ndarray
+            모델 학습에 사용할 유저 및 책 정보(범주형 데이터)를 입력합니다.
+        img_vector : np.ndarray
+            벡터화된 이미지 데이터를 입력합니다.
+        rating : np.ndarray
+            정답 데이터를 입력합니다.
+        """
+        self.user_book_vector = user_book_vector
+        self.img_vector = img_vector
+        self.rating = rating
+    def __len__(self):
+        return self.user_book_vector.shape[0]
+    def __getitem__(self, i):
+        return {
+                'user_book_vector' : torch.tensor(self.user_book_vector[i], dtype=torch.long),
+                'img_vector' : torch.tensor(self.img_vector[i], dtype=torch.float32),
+                'rating' : torch.tensor(self.rating[i], dtype=torch.float32) if self.rating is not None else None,
+                }
+
+
+def image_vector(path):
+    """
+    Parameters
+    ----------
+    path : str
+        이미지가 존재하는 경로를 입력합니다.
+
+    Returns
+    -------
+    img_fe : np.ndarray
+        이미지를 벡터화한 결과를 반환합니다.
+        베이스라인에서는 224 x 224 로 사이즈를 맞추고, grayscale일 경우 RGB로 변경합니다. => (3, 224, 224)
+    """
+    img = Image.open(path)
+    scale = transforms.Resize((224, 224))
+    gray2rgb = transforms.Grayscale(num_output_channels=3)
+    img_fe = scale(img) if img.mode == 'RGB' else gray2rgb(scale(img))
+
+    return img_fe
+
+
+def process_img_data(books):
+    """
+    Parameters
+    ----------
+    books : pd.DataFrame
+        책 정보에 대한 데이터 프레임을 입력합니다.
+    
+    Returns
+    -------
+    books_ : pd.DataFrame
+        이미지 정보를 벡터화하여 추가한 데이터 프레임을 반환합니다.
+    """
+    books_ = books.copy()
+    books_['img_path'] = books_['img_path'].apply(lambda x: 'data/'+x)
+    img_vecs = []
+    for idx in tqdm(books_.index):
+        img_vec = image_vector(books_.loc[idx, 'img_path'])
+        img_vecs.append(np.array(img_vec))
+
+    books_['img_vector'] = img_vecs
+
+    return books_
+
+
+def image_data_load(args):
+    """
+    Parameters
+    ----------
+    args.data_path : str
+        데이터 경로를 설정할 수 있는 parser
+    data : dict
+        image_data_split로 부터 학습/평가/테스트 데이터가 담긴 사전 형식의 데이터를 입력합니다.
+    
+    Returns
+    -------
+    data : Dict
+        학습 및 테스트 데이터가 담긴 사전 형식의 데이터를 반환합니다.
+    """
+    users = pd.read_csv(args.data_path + 'users.csv')  # 베이스라인 코드에서는 사실상 사용되지 않음
+    books = pd.read_csv(args.data_path + 'books.csv')
+    train = pd.read_csv(args.data_path + 'train_ratings.csv')
+    test = pd.read_csv(args.data_path + 'test_ratings.csv')
+    sub = pd.read_csv(args.data_path + 'sample_submission.csv')
+
+    # 이미지를 벡터화하여 데이터 프레임에 추가
+    books_ = process_img_data(books)
+
+    # 유저 및 책 정보를 합쳐서 데이터 프레임 생성 (단, 베이스라인에서는 user_id, isbn, img_vector만 사용함)
+    user_features = []
+    book_features = []
+    features_col = list(set(['user_id', 'isbn'] + user_features + book_features))  # unique한 feature들만 추출
+
+    train_df = train.merge(books_[book_features + ['isbn', 'img_vector']], on='isbn', how='left')\
+                    .merge(users[user_features + ['user_id']], on='user_id', how='left')
+    test_df = test.merge(books_[book_features + ['isbn', 'img_vector']], on='isbn', how='left')\
+                  .merge(users[user_features + ['user_id']], on='user_id', how='left')
+    all_df = pd.concat([train_df, test_df], axis=0)
+
+    # feature_cols의 데이터만 라벨 인코딩하고 인덱스 정보를 저장
+    label2idx, idx2label = {}, {}
+    for col in features_col:
+        unique_labels = all_df[col].astype("category").cat.categories
+        label2idx[col] = {label:idx for idx, label in enumerate(unique_labels)}
+        idx2label[col] = {idx:label for idx, label in enumerate(unique_labels)}
+        train_df[col] = train_df[col].astype("category").cat.codes
+        test_df[col] = test_df[col].astype("category").cat.codes
+
+    field_dims = [len(label2idx[col]) for col in features_col]
+
+    data = {
+            'train':train_df,
+            'test':test_df.drop(['rating'], axis=1),
+            'field_names':features_col,
+            'field_dims':field_dims,
+            'label2idx':label2idx,
+            'idx2label':idx2label,
+            'sub':sub,
+            }
+    
+    return data
+
+
+def image_data_split(args, data):
+    """학습 데이터를 학습/검증 데이터로 나누어 추가한 후 반환합니다."""
+    return basic_data_split(args, data)
+
+
+def image_data_loader(args, data):
+    """
+    Parameters
+    ----------
+    args.batch_size : int
+        데이터 batch에 사용할 데이터 사이즈
+    args.data_shuffle : bool
+        data shuffle 여부
+    args.test_size : float
+        Train/Valid split 비율로, 0일 경우에 대한 처리를 위해 사용
+    data : Dict
+        image_data_split()에서 반환된 데이터
+    
+    Returns
+    -------
+    data : Dict
+        Image_Dataset 형태의 학습/검증/테스트 데이터를 DataLoader로 변환하여 추가한 후 반환합니다.
+    """
+    train_dataset = Image_Dataset(
+                                data['X_train'][data['field_names']].values,
+                                data['X_train']['img_vector'].values,
+                                data['y_train'].values
+                                )
+    valid_dataset = Image_Dataset(
+                                data['X_valid'][data['field_names']].values,
+                                data['X_valid']['img_vector'].values,
+                                data['y_valid'].values
+                                ) if args.test_size != 0 else None
+    test_dataset = Image_Dataset(
+                                data['test'][data['field_names']].values,
+                                data['test']['img_vector'].values
+                                )
+
+    train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=0, shuffle=args.data_shuffle)
+    valid_dataloader = DataLoader(valid_dataset, batch_size=args.batch_size, num_workers=0, shuffle=args.data_shuffle) if args.test_size != 0 else None
+    test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, num_workers=0, shuffle=False)
+    data['train_dataloader'], data['valid_dataloader'], data['test_dataloader'] = train_dataloader, valid_dataloader, test_dataloader
+    return data
