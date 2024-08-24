@@ -47,13 +47,13 @@ def train(args, model, dataloader, logger, setting):
 
         for data in dataloader['train_dataloader']:
             if args.model == 'CNN_FM':
-                x, y = [data['user_isbn_vector'].to(args.device), data['img_vector'].to(args.device)], data['label'].to(args.device)
+                x, y = [data['user_book_vector'].to(args.device), data['img_vector'].to(args.device)], data['rating'].to(args.device)
             elif args.model == 'DeepCoNN':
-                x, y = [data['user_isbn_vector'].to(args.device), data['user_summary_merge_vector'].to(args.device), data['item_summary_vector'].to(args.device)], data['label'].to(args.device)
+                x, y = [data['user_book_vector'].to(args.device), data['user_summary_merge_vector'].to(args.device), data['item_summary_vector'].to(args.device)], data['rating'].to(args.device)
             else:
                 x, y = data[0].to(args.device), data[1].to(args.device)
             y_hat = model(x)
-            loss = loss_fn(y.float(), y_hat)
+            loss = loss_fn(y_hat, y.float())
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -62,7 +62,7 @@ def train(args, model, dataloader, logger, setting):
         msg = f'[Epoch {epoch+1:02d}/{args.epochs:02d}]'
         train_loss = total_loss / train_len
         msg += f'\nTrain Loss: {train_loss:.3f}'
-        if args.test_size != 0:
+        if args.test_size != 0:  # valid 데이터가 존재할 경우
             valid_loss = valid(args, model, dataloader['valid_dataloader'], loss_fn)
             msg += f'\nValid Loss: {valid_loss:.3f}'
             
@@ -74,7 +74,7 @@ def train(args, model, dataloader, logger, setting):
                 msg += f' | {metric}: {value:.3f}'
             print(msg)
             logger.log(epoch=epoch+1, train_loss=train_loss, valid_loss=valid_loss, valid_metrics=valid_metrics)
-        else:
+        else:  # valid 데이터가 없을 경우
             print(msg)
             logger.log(epoch=epoch+1, train_loss=train_loss)
         
@@ -96,9 +96,9 @@ def valid(args, model, dataloader, loss_fn):
 
     for data in dataloader:
         if args.model == 'CNN_FM':
-            x, y = [data['user_isbn_vector'].to(args.device), data['img_vector'].to(args.device)], data['label'].to(args.device)
+            x, y = [data['user_book_vector'].to(args.device), data['img_vector'].to(args.device)], data['rating'].to(args.device)
         elif args.model == 'DeepCoNN':
-            x, y = [data['user_isbn_vector'].to(args.device), data['user_summary_merge_vector'].to(args.device), data['item_summary_vector'].to(args.device)], data['label'].to(args.device)
+            x, y = [data['user_book_vector'].to(args.device), data['user_summary_merge_vector'].to(args.device), data['item_summary_vector'].to(args.device)], data['rating'].to(args.device)
         else:
             x, y = data[0].to(args.device), data[1].to(args.device)
         y_hat = model(x)
@@ -119,9 +119,9 @@ def test(args, model, dataloader, setting):
 
     for idx, data in enumerate(dataloader['test_dataloader']):
         if args.model == 'CNN_FM':
-            x, _ = [data['user_isbn_vector'].to(args.device), data['img_vector'].to(args.device)], data['label'].to(args.device)
+            x, _ = [data['user_book_vector'].to(args.device), data['img_vector'].to(args.device)], data['rating'].to(args.device)
         elif args.model == 'DeepCoNN':
-            x, _ = [data['user_isbn_vector'].to(args.device), data['user_summary_merge_vector'].to(args.device), data['item_summary_vector'].to(args.device)], data['label'].to(args.device)
+            x, _ = [data['user_book_vector'].to(args.device), data['user_summary_merge_vector'].to(args.device), data['item_summary_vector'].to(args.device)], data['rating'].to(args.device)
         else:
             x = data[0].to(args.device)
         y_hat = model(x)

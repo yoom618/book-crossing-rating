@@ -106,30 +106,37 @@ if __name__ == "__main__":
     arg('--device', type=str, default='cuda', choices=['cuda', 'cpu', 'mps'], help='학습에 사용할 Device를 조정할 수 있습니다.')
 
 
-    ############### FM, FFM, NCF, WDN, DCN Common OPTION
+    ############### Common Options for FM, FFM, NCF, WDN, DCN, CNN_FM, DeepCoNN
     arg('--embed_dim', type=int, default=8, help='FM, FFM, NCF, WDN, DCN에서 embedding시킬 차원을 조정할 수 있습니다.')
+
+
+    ############### NCF, WDN, DCN
     arg('--dropout', type=float, default=0.2, help='NCF, WDN, DCN에서 Dropout rate를 조정할 수 있습니다.')
-    arg('--mlp_dims', type=list, default=(16, 32), help='NCF, WDN, DCN에서 MLP Network의 차원을 조정할 수 있습니다.')
+    arg('--mlp_dims', type=list, default=[16, 32], help='NCF, WDN, DCN에서 MLP Network의 차원을 조정할 수 있습니다.')
 
 
     ############### DCN
     arg('--num_layers', type=int, default=3, help='에서 Cross Network의 레이어 수를 조정할 수 있습니다.')
 
 
+    ############### CNN_FM, DeepCoNN
+    arg('--kernel_size', type=int, default=3, help='CNN_FM, DEEP_CONN에서 CNN의 kernel 크기를 조정할 수 있습니다.')
+    arg('--stride', type=int, default=2, help='CNN_FM, DEEP_CONN에서 CNN의 stride 크기를 조정할 수 있습니다.')
+    arg('--padding', type=int, default=1, help='CNN_FM, DEEP_CONN에서 CNN의 padding 크기를 조정할 수 있습니다.')
+    arg('--dense_latent_dim', type=int, default=12, help='CNN_FM, DEEP_CONN에서 user/item/image에 대한 latent 차원을 조정할 수 있습니다.')
+
+
     ############### CNN_FM
-    arg('--cnn_embed_dim', type=int, default=64, help='CNN_FM에서 user와 item에 대한 embedding시킬 차원을 조정할 수 있습니다.')
-    arg('--cnn_latent_dim', type=int, default=12, help='CNN_FM에서 user/item/image에 대한 latent 차원을 조정할 수 있습니다.')
+    arg('--img_size', type=int, default=224, help='이미지 전처리 시 이미지 크기를 조정할 수 있습니다.')
+    arg('--channel_list', type=list, default=[4, 8, 16], help='CNN_FM에서 CNN의 채널 수를 조정할 수 있습니다.')
 
 
     ############### DeepCoNN
     arg('--pretained_model', type=str, default='bert-base-uncased', help='책의 요약 정보를 임베딩하기 위한 pretrained model을 설정할 수 있습니다.')
     arg('--vector_create', type=bool, default=False, help='DEEP_CONN에서 text vector 생성 여부를 조정할 수 있으며 최초 학습에만 True로 설정하여야합니다.')
-    arg('--deepconn_embed_dim', type=int, default=32, help='DEEP_CONN에서 user와 item에 대한 embedding시킬 차원을 조정할 수 있습니다.')
-    arg('--deepconn_latent_dim', type=int, default=10, help='DEEP_CONN에서 user/item/image에 대한 latent 차원을 조정할 수 있습니다.')
-    arg('--conv_1d_out_dim', type=int, default=50, help='DEEP_CONN에서 1D conv의 출력 크기를 조정할 수 있습니다.')
-    arg('--kernel_size', type=int, default=3, help='DEEP_CONN에서 1D conv의 kernel 크기를 조정할 수 있습니다.')
-    arg('--word_dim', type=int, default=768, help='DEEP_CONN에서 1D conv의 입력 크기를 조정할 수 있습니다.')
-    arg('--out_dim', type=int, default=32, help='DEEP_CONN에서 1D conv의 출력 크기를 조정할 수 있습니다.')
+    arg('--word_dim', type=int, default=768, help='DEEP_CONN에서 1D conv의 입력 크기를 조정할 수 있습니다. (bert-base-uncased 기준 768)')
+    arg('--conv_1d_out_dim', type=int, default=32, help='DEEP_CONN에서 1D conv의 출력 크기를 조정할 수 있습니다.')
+    arg('--out_dim', type=int, default=50, help='DEEP_CONN에서 1D conv에 linear를 적용한 뒤 최종적으로 나오는 차원을 조정할 수 있습니다.')
 
 
     args = parser.parse_args()

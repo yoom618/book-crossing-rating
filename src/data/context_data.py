@@ -94,7 +94,7 @@ def process_context_data(users, books):
     users_['location_city'] = users_['location_list'].apply(lambda x: x[2] if len(x) > 2 else np.nan)
     users_ = users_.drop(['location'], axis=1)
 
-    return users, books
+    return users_, books_
 
 
 def context_data_load(args):
@@ -117,7 +117,7 @@ def context_data_load(args):
     test = pd.read_csv(args.data_path + 'test_ratings.csv')
     sub = pd.read_csv(args.data_path + 'sample_submission.csv')
 
-    users_, books_ = process_context_data(users, books, train, test)
+    users_, books_ = process_context_data(users, books)
     
     
     # 사용할 컬럼(모두 카테고리)만 추출하여 데이터 조인

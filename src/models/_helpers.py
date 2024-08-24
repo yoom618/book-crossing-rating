@@ -23,7 +23,7 @@ class FeaturesEmbedding(nn.Module):
     def forward(self, x: torch.Tensor):
         x = x + x.new_tensor(self.offsets).unsqueeze(0)
 
-        return self.embedding(x)
+        return self.embedding(x)  # (batch_size, num_fields, embed_dim)
 
 
 # FM 계열 모델에서 활용되는 선형 결합 부분을 정의합니다.
@@ -58,25 +58,45 @@ class FeaturesLinear(nn.Module):
 
 
 
+# sparse feature 사이의 상호작용을 효율적으로 계산합니다.
+# 사용되는 모델 : FM
+class FMLayer_Sparse(nn.Module):
+    def __init__(self, field_dims:list, factor_dim:int):
+        super().__init__()
+        self.embedding = FeaturesEmbedding(field_dims, factor_dim)
+
+
+    def square(self, x):
+        return torch.pow(x,2)
+    
+
+    def forward(self, x: torch.Tensor):
+        # x =               # FILL HERE : Use `self.embedding` #
+        # square_of_sum =   # FILL HERE : Use `torch.sum()` and `self.square()` #
+        # sum_of_square =   # FILL HERE : Use `torch.sum()` and `self.square()` #
+        x = self.embedding(x)
+        square_of_sum = self.square(torch.sum(x, dim=1))
+        sum_of_square = torch.sum(self.square(x), dim=1)
+        
+        return 0.5 * torch.sum(square_of_sum - sum_of_square, dim=1)
+    
+
 # dense feature 사이의 상호작용을 효율적으로 계산합니다. (first-order도 포함)
-# 사용되는 모델 : DCN, DeepCoNN
+# 사용되는 모델 : DeepCoNN, CNN-FM
 class FMLayer_Dense(nn.Module):
     def __init__(self, input_dim, latent_dim):
         super().__init__()
-        self.linear = nn.Linear(input_dim, 1, bias=True)
         self.v = nn.Parameter(torch.rand(input_dim, latent_dim))
 
     def square(self, x:torch.Tensor):
         return torch.pow(x,2)
 
     def forward(self, x):
-        first_order = self.linear(x).squeeze(1)
-
         square_of_matmul = self.square(torch.mm(x, self.v))
         matmul_of_square = torch.mm(self.square(x), self.square(self.v))
-        second_order = 0.5 * torch.sum(square_of_matmul - matmul_of_square, dim=1)
+        
 
-        return first_order + second_order
+        return 0.5 * torch.sum(square_of_matmul - matmul_of_square, dim=1)
     
 
 
@@ -129,7 +149,7 @@ class CNN_Base(nn.Module):
         
 
     def forward(self, x):
-        x = self.cnn_layer(x)
-        x = x.view(-1, self.output_dim[0] * self.output_dim[1] * self.output_dim[2])
+        x = self.cnn(x)
+        x = x.view(-1, x.size(1) * x.size(2) * x.size(3))
 
         return x

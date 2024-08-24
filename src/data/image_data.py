@@ -33,7 +33,7 @@ class Image_Dataset(Dataset):
                 }
 
 
-def image_vector(path):
+def image_vector(path, img_size):
     """
     Parameters
     ----------
@@ -47,14 +47,15 @@ def image_vector(path):
         베이스라인에서는 224 x 224 로 사이즈를 맞추고, grayscale일 경우 RGB로 변경합니다. => (3, 224, 224)
     """
     img = Image.open(path)
-    scale = transforms.Resize((224, 224))
-    gray2rgb = transforms.Grayscale(num_output_channels=3)
-    img_fe = scale(img) if img.mode == 'RGB' else gray2rgb(scale(img))
+    scale = transforms.Resize((img_size, img_size))
+    tensor = transforms.ToTensor()
+    gray2rgb = transforms.Lambda(lambda x: x.convert('RGB'))
+    img_fe = tensor(scale(gray2rgb(img)))
 
-    return img_fe
+    return img_fe.numpy()
 
 
-def process_img_data(books):
+def process_img_data(books, args):
     """
     Parameters
     ----------
@@ -70,8 +71,8 @@ def process_img_data(books):
     books_['img_path'] = books_['img_path'].apply(lambda x: 'data/'+x)
     img_vecs = []
     for idx in tqdm(books_.index):
-        img_vec = image_vector(books_.loc[idx, 'img_path'])
-        img_vecs.append(np.array(img_vec))
+        img_vec = image_vector(books_.loc[idx, 'img_path'], args.img_size)
+        img_vecs.append(img_vec)
 
     books_['img_vector'] = img_vecs
 
@@ -99,7 +100,7 @@ def image_data_load(args):
     sub = pd.read_csv(args.data_path + 'sample_submission.csv')
 
     # 이미지를 벡터화하여 데이터 프레임에 추가
-    books_ = process_img_data(books)
+    books_ = process_img_data(books, args)
 
     # 유저 및 책 정보를 합쳐서 데이터 프레임 생성 (단, 베이스라인에서는 user_id, isbn, img_vector만 사용함)
     user_features = []

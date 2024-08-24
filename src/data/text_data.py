@@ -96,13 +96,13 @@ def process_text_data(ratings, users, books, tokenizer, model, vector_create=Fal
             vector = text_to_vector(prompt_, tokenizer, model)
             item_summary_vector_list.append(vector)
         
+        print(books_['isbn'].values.shape, np.asarray(item_summary_vector_list).shape)
         item_summary_vector_list = np.concatenate([
-                                                   books_['isbn'].values.reshape(1, -1),
-                                                   np.array(item_summary_vector_list).reshape(1, -1)
-                                                  ]).T
+                                                   books_['isbn'].values.reshape(-1, 1),
+                                                   np.asarray(item_summary_vector_list)
+                                                  ], axis=1)
         
-        np.save('./data/text_vector/item_summary_vector.npy', item_summary_vector_list)
-        
+        np.save('./data/text_vector/item_summary_vector.npy', item_summary_vector_list)        
 
         print('Create User Summary Merge Vector')
         user_summary_merge_vector_list = []
@@ -117,9 +117,9 @@ def process_text_data(ratings, users, books, tokenizer, model, vector_create=Fal
             user_summary_merge_vector_list.append(vector)
         
         user_summary_merge_vector_list = np.concatenate([
-                                                         users_['user_id'].values.reshape(1, -1),
-                                                         np.array(user_summary_merge_vector_list).reshape(1, -1)
-                                                        ]).T
+                                                         users_['user_id'].values.reshape(-1, 1),
+                                                         np.asarray(user_summary_merge_vector_list)
+                                                        ], axis=1)
         
         np.save('./data/text_vector/user_summary_merge_vector.npy', user_summary_merge_vector_list)        
         
@@ -129,10 +129,13 @@ def process_text_data(ratings, users, books, tokenizer, model, vector_create=Fal
         item_summary_vector_list = np.load('./data/text_vector/item_summary_vector.npy', allow_pickle=True)
         user_summary_merge_vector_list = np.load('./data/text_vector/user_summary_merge_vector.npy', allow_pickle=True)
 
-    users_ = pd.merge(users_, pd.DataFrame(user_summary_merge_vector_list, 
-                                            columns=['user_id', 'user_summary_merge_vector']), on='user_id', how='left')
-    books_ = pd.merge(books_, pd.DataFrame(item_summary_vector_list,
-                                            columns=['isbn', 'item_summary_vector']), on='isbn', how='left')
+    item_summary_vector_df = pd.DataFrame({'isbn': item_summary_vector_list[:, 0]})
+    item_summary_vector_df['item_summary_vector'] = list(item_summary_vector_list[:, 1:])
+    user_summary_vector_df = pd.DataFrame({'user_id': user_summary_merge_vector_list[:, 0]})
+    user_summary_vector_df['user_summary_merge_vector'] = list(user_summary_merge_vector_list[:, 1:])
+
+    books_ = pd.merge(books_, item_summary_vector_df, on='isbn', how='left')
+    users_ = pd.merge(users_, user_summary_vector_df, on='user_id', how='left')
 
     return users_, books_
 
