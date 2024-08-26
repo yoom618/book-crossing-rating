@@ -59,7 +59,7 @@ class FeaturesLinear(nn.Module):
 
 
 # dense feature 사이의 상호작용을 효율적으로 계산합니다.
-# 사용되는 모델 : DeepFM, CNN_FM, CNN_DeepFM, DeepCoNN
+# 사용되는 모델 : DeepFM, Image_FM, Image_DeepFM, Text_FM, Text_DeepFM
 class FMLayer_Dense(nn.Module):
     def __init__(self):
         super().__init__()
@@ -95,41 +95,27 @@ class FMLayer_Sparse(nn.Module):
         x = self.fm(x)
         
         return x
-
-
-
-# class FMLayer_Original(nn.Module):
-#     def __init__(self, input_dim, latent_dim):
-#         super().__init__()
-#         self.v = nn.Parameter(torch.rand(input_dim, latent_dim))
-
-#     def square(self, x:torch.Tensor):
-#         return torch.pow(x,2)
-
-#     def forward(self, x):
-#         square_of_matmul = self.square(torch.mm(x, self.v))
-#         matmul_of_square = torch.mm(self.square(x), self.square(self.v))
-        
-
-#         return 0.5 * torch.sum(square_of_matmul - matmul_of_square, dim=1)
     
 
 
 # 기본적인 형태의 MLP를 구현합니다.
-# 사용되는 모델 : DeepFM, CNN_DeepFM, WDN, DCN, NCF
+# 사용되는 모델 : DeepFM, Image_DeepFM, Text_DeepFM, WDN, DCN, NCF
 class MLP_Base(nn.Module):
-    def __init__(self, input_dim, embed_dims, dropout, output_layer=True):
+    def __init__(self, input_dim, embed_dims, 
+                 batchnorm=True, dropout=0.2, output_layer=False):
         super().__init__()
-        layers = list()
-        for embed_dim in embed_dims:
-            layers.append(nn.Linear(input_dim, embed_dim))
-            layers.append(nn.BatchNorm1d(embed_dim))
-            layers.append(nn.ReLU())
-            layers.append(nn.Dropout(p=dropout))
+        self.mlp = nn.Sequential()
+        for idx, embed_dim in enumerate(embed_dims):
+            self.mlp.add_module(f'linear{idx}', nn.Linear(input_dim, embed_dim))
+            if batchnorm:
+                self.mlp.add_module(f'batchnorm{idx}', nn.BatchNorm1d(embed_dim))
+            self.mlp.add_module(f'relu{idx}', nn.ReLU())
+            if dropout > 0:
+                self.mlp.add_module(f'dropout{idx}', nn.Dropout(p=dropout))
             input_dim = embed_dim
         if output_layer:
-            layers.append(nn.Linear(input_dim, 1))
-        self.mlp = nn.Sequential(*layers)
+            self.mlp.add_module('output', nn.Linear(input_dim, 1))
+        
 
     def forward(self, x):
         return self.mlp(x)
@@ -137,20 +123,26 @@ class MLP_Base(nn.Module):
 
 
 # 기본적인 형태의 CNN을 정의합니다. 이미지 데이터의 특징을 추출하기 위해 사용됩니다.
-# 사용되는 모델 : CNN_FM, CNN_DeepFM
+# 사용되는 모델 : Image_FM, Image_DeepFM
 class CNN_Base(nn.Module):
     def __init__(self, input_size=(3, 64, 64), 
-                 channel_list=[8,16,32], kernel_size=3, stride=2, padding=1):
+                 channel_list=[8,16,32], kernel_size=3, stride=2, padding=1,
+                 dropout=0.2, batchnorm=True):
         super().__init__()
 
+        # CNN 구조 : Conv2d -> BatchNorm2d -> ReLU -> Dropout 
+        #           -> Conv2d -> BatchNorm2d -> ReLU -> Dropout -> MaxPool2d -> ...
         self.cnn = nn.Sequential()
         in_channel_list = [input_size[0]] + channel_list[:-1]
         for idx, (in_channel, out_channel) in enumerate(zip(in_channel_list, channel_list)):
-            self.cnn.append(nn.Conv2d(in_channel, out_channel, kernel_size, stride, padding))
-            self.cnn.append(nn.BatchNorm2d(out_channel))
-            self.cnn.append(nn.ReLU())
-            if idx % 2 == 0:  # Convolutional Layer 2개마다 MaxPooling을 한 번 적용
-                self.cnn.append(nn.MaxPool2d(kernel_size=2, stride=2))
+            self.cnn.add_module(f'conv{idx}', nn.Conv2d(in_channel, out_channel, kernel_size=kernel_size, stride=stride, padding=padding))
+            if batchnorm:
+                self.cnn.add_module(f'batchnorm{idx}', nn.BatchNorm2d(out_channel))
+            self.cnn.add_module(f'relu{idx}', nn.ReLU())
+            if dropout > 0:
+                self.cnn.add_module(f'dropout{idx}', nn.Dropout(p=dropout))
+            if idx % 2 == 1:
+                self.cnn.add_module(f'maxpool{idx}', nn.MaxPool2d(kernel_size=2, stride=2))
 
         self.output_dim = self.compute_output_shape((1, *input_size))
 

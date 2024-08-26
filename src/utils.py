@@ -38,18 +38,24 @@ def models_load(args, data):
         model = FactorizationMachine(args, data).to(args.device)
     elif args.model=='FFM':
         model = FieldAwareFactorizationMachine(args, data).to(args.device)
+    elif args.model=='DeepFM':
+        model = DeepFM(args, data).to(args.device)
     elif args.model=='NCF':
         model = NeuralCollaborativeFiltering(args, data).to(args.device)
     elif args.model=='WDN':
         model = WideAndDeep(args, data).to(args.device)
     elif args.model=='DCN':
         model = DeepCrossNetwork(args, data).to(args.device)
-    elif args.model=='CNN_FM':
-        model = CNN_FM(args, data).to(args.device)
-    elif args.model=='DeepCoNN':
-        model = DeepCoNN(args, data).to(args.device)
+    elif args.model=='Image_FM':
+        model = Image_FM(args, data).to(args.device)
+    elif args.model=='Image_DeepFM':
+        model = Image_DeepFM(args, data).to(args.device)
+    elif args.model=='Text_FM':
+        model = Text_FM(args, data).to(args.device)
+    elif args.model=='Text_DeepFM':
+        model = Text_DeepFM(args, data).to(args.device)
     else:
-        raise ValueError('MODEL is not exist : select model in [FM,FFM,NCF,WDN,DCN,CNN_FM,DeepCoNN]')
+        raise ValueError('MODEL is not exist : select model in [FM,FFM,DeepFM,NCF,WDN,DCN,Image_FM,Image_DeepFM,Text_FM,Text_DeepFM]')
     return model
 
 

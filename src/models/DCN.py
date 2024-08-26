@@ -32,7 +32,7 @@ class DeepCrossNetwork(nn.Module):
         self.embedding = FeaturesEmbedding(self.field_dims, args.embed_dim)
         self.embed_output_dim = len(self.field_dims) * args.embed_dim
         self.cn = CrossNetwork(self.embed_output_dim, args.cross_n_layers)
-        self.mlp = MLP_Base(self.embed_output_dim, args.mlp_dims, args.dropout, output_layer=False)
+        self.mlp = MLP_Base(self.embed_output_dim, args.mlp_dims, args.batchnorm, args.dropout)
         self.cd_linear = nn.Linear(args.mlp_dims[-1], 1, bias=False)
 
 

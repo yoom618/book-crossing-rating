@@ -1,9 +1,8 @@
 import os
 import re
-from nltk import tokenize
 import numpy as np
 import pandas as pd
-from tqdm.auto import tqdm
+from tqdm import tqdm
 import torch
 from torch.utils.data import DataLoader, Dataset
 from transformers import AutoTokenizer, AutoModel
@@ -41,15 +40,15 @@ def text_to_vector(text, tokenizer, model):
         텍스트 데이터를 벡터로 임베딩하기 위한 모델
     ----------
     """
-    for sent in tokenize.sent_tokenize(text):
-        text_ = "[CLS] " + sent + " [SEP]"
-        tokenized = tokenizer.encode(text_, add_special_tokens=True)
-        token_tensor = torch.tensor([tokenized], device=model.device)
-        with torch.no_grad():
-            outputs = model(token_tensor)  # attention_mask를 사용하지 않아도 됨
-            ### BERT 모델의 경우, 최종 출력물의 사이즈가 (토큰길이, 임베딩=768)이므로, 이를 평균내어 사용하거나 pooler_output을 사용하여 [CLS] 토큰의 임베딩만 사용
-            # sentence_embedding = torch.mean(outputs.last_hidden_state[0], dim=0)  # 방법1) 모든 토큰의 임베딩을 평균내어 사용
-            sentence_embedding = outputs.pooler_output.squeeze(0)  # 방법2) pooler_output을 사용하여 맨 첫 토큰인 [CLS] 토큰의 임베딩만 사용
+    text_ = "[CLS] " + text + " [SEP]"
+    tokenized = tokenizer.encode(text_, add_special_tokens=True)
+    token_tensor = torch.tensor([tokenized], device=model.device)
+    with torch.no_grad():
+        outputs = model(token_tensor)  # attention_mask를 사용하지 않아도 됨
+        ### BERT 모델의 경우, 최종 출력물의 사이즈가 (토큰길이, 임베딩=768)이므로, 이를 평균내어 사용하거나 pooler_output을 사용하여 [CLS] 토큰의 임베딩만 사용
+        # sentence_embedding = torch.mean(outputs.last_hidden_state[0], dim=0)  # 방법1) 모든 토큰의 임베딩을 평균내어 사용
+        sentence_embedding = outputs.pooler_output.squeeze(0)  # 방법2) pooler_output을 사용하여 맨 첫 토큰인 [CLS] 토큰의 임베딩만 사용
+    
     return sentence_embedding.cpu().detach().numpy() 
 
 
@@ -90,7 +89,7 @@ def process_text_data(ratings, users, books, tokenizer, model, vector_create=Fal
             os.makedirs('./data/text_vector')
 
         # print('Create Item Summary Vector')
-        # item_summary_vector_list = []
+        # book_summary_vector_list = []
         # for title, summary in tqdm(zip(books_['book_title'], books_['summary']), total=len(books_)):
         #     # 책에 대한 텍스트 프롬프트는 아래와 같이 구성됨
         #     # '''
@@ -99,14 +98,14 @@ def process_text_data(ratings, users, books, tokenizer, model, vector_create=Fal
         #     # '''
         #     prompt_ = f'Book Title: {title}\n Summary: {summary}\n'
         #     vector = text_to_vector(prompt_, tokenizer, model)
-        #     item_summary_vector_list.append(vector)
+        #     book_summary_vector_list.append(vector)
         
-        # item_summary_vector_list = np.concatenate([
+        # book_summary_vector_list = np.concatenate([
         #                                         books_['isbn'].values.reshape(-1, 1),
-        #                                         np.asarray(item_summary_vector_list)
+        #                                         np.asarray(book_summary_vector_list, dtype=np.float32)
         #                                         ], axis=1)
         
-        # np.save('./data/text_vector/item_summary_vector.npy', item_summary_vector_list)        
+        # np.save('./data/text_vector/book_summary_vector.npy', book_summary_vector_list)        
 
 
         print('Create User Summary Merge Vector')
@@ -136,7 +135,7 @@ def process_text_data(ratings, users, books, tokenizer, model, vector_create=Fal
         
         user_summary_merge_vector_list = np.concatenate([
                                                          users_['user_id'].values.reshape(-1, 1),
-                                                         np.asarray(user_summary_merge_vector_list)
+                                                         np.asarray(user_summary_merge_vector_list, dtype=np.float32)
                                                         ], axis=1)
         
         np.save('./data/text_vector/user_summary_merge_vector.npy', user_summary_merge_vector_list)        
@@ -144,15 +143,15 @@ def process_text_data(ratings, users, books, tokenizer, model, vector_create=Fal
     else:
         print('Check Vectorizer')
         print('Vector Load')
-        item_summary_vector_list = np.load('./data/text_vector/item_summary_vector.npy', allow_pickle=True)
+        book_summary_vector_list = np.load('./data/text_vector/book_summary_vector.npy', allow_pickle=True)
         user_summary_merge_vector_list = np.load('./data/text_vector/user_summary_merge_vector.npy', allow_pickle=True)
 
-    item_summary_vector_df = pd.DataFrame({'isbn': item_summary_vector_list[:, 0]})
-    item_summary_vector_df['item_summary_vector'] = list(item_summary_vector_list[:, 1:])
+    book_summary_vector_df = pd.DataFrame({'isbn': book_summary_vector_list[:, 0]})
+    book_summary_vector_df['book_summary_vector'] = list(book_summary_vector_list[:, 1:].astype(np.float32))
     user_summary_vector_df = pd.DataFrame({'user_id': user_summary_merge_vector_list[:, 0]})
-    user_summary_vector_df['user_summary_merge_vector'] = list(user_summary_merge_vector_list[:, 1:])
+    user_summary_vector_df['user_summary_merge_vector'] = list(user_summary_merge_vector_list[:, 1:].astype(np.float32))
 
-    books_ = pd.merge(books_, item_summary_vector_df, on='isbn', how='left')
+    books_ = pd.merge(books_, book_summary_vector_df, on='isbn', how='left')
     users_ = pd.merge(users_, user_summary_vector_df, on='user_id', how='left')
 
     return users_, books_
@@ -182,14 +181,14 @@ class Text_Dataset(Dataset):
     def __getitem__(self, i):
         return {
                 'user_book_vector' : torch.tensor(self.user_book_vector[i], dtype=torch.long),
-                'user_summary_vector' : torch.tensor(self.user_summary_vector[i].reshape(-1, 1), dtype=torch.float32),
-                'book_summary_vector' : torch.tensor(self.item_summary_vector[i].reshape(-1, 1), dtype=torch.float32),
+                'user_summary_vector' : torch.tensor(self.user_summary_vector[i], dtype=torch.float32),
+                'book_summary_vector' : torch.tensor(self.book_summary_vector[i], dtype=torch.float32),
                 'rating' : torch.tensor(self.rating[i], dtype=torch.float32),
                 } if self.rating is not None else \
                 {
                 'user_book_vector' : torch.tensor(self.user_book_vector[i], dtype=torch.long),
-                'user_summary_vector' : torch.tensor(self.user_summary_vector[i].reshape(-1, 1), dtype=torch.float32),
-                'book_summary_vector' : torch.tensor(self.item_summary_vector[i].reshape(-1, 1), dtype=torch.float32),
+                'user_summary_vector' : torch.tensor(self.user_summary_vector[i], dtype=torch.float32),
+                'book_summary_vector' : torch.tensor(self.book_summary_vector[i], dtype=torch.float32),
                 }
 
 
@@ -221,14 +220,14 @@ def text_data_load(args):
     model.eval()
     users_, books_ = process_text_data(train, users, books, tokenizer, model, args.vector_create)
 
-    # 유저 및 책 정보를 합쳐서 데이터 프레임 생성 (단, 베이스라인에서는 user_id, isbn, user_summary_merge_vector, item_summary_vector만 사용함)
+    # 유저 및 책 정보를 합쳐서 데이터 프레임 생성 (단, 베이스라인에서는 user_id, isbn, user_summary_merge_vector, book_summary_vector만 사용함)
     user_features = []
     book_features = []
     features_col = list(set(['user_id', 'isbn'] + user_features + book_features))  # unique한 feature들만 추출
     
-    train_df = train.merge(books_[book_features + ['isbn', 'item_summary_vector']], on='isbn', how='left')\
+    train_df = train.merge(books_[book_features + ['isbn', 'book_summary_vector']], on='isbn', how='left')\
                     .merge(users_[user_features + ['user_id', 'user_summary_merge_vector']], on='user_id', how='left')
-    test_df = test.merge(books_[book_features + ['isbn', 'item_summary_vector']], on='isbn', how='left')\
+    test_df = test.merge(books_[book_features + ['isbn', 'book_summary_vector']], on='isbn', how='left')\
                   .merge(users_[user_features + ['user_id', 'user_summary_merge_vector']], on='user_id', how='left')
     all_df = pd.concat([train, test], axis=0)
 
@@ -282,19 +281,19 @@ def text_data_loader(args, data):
     train_dataset = Text_Dataset(
                                 data['X_train'][data['field_names']].values,
                                 data['X_train']['user_summary_merge_vector'].values,
-                                data['X_train']['item_summary_vector'].values,
+                                data['X_train']['book_summary_vector'].values,
                                 data['y_train'].values
                                 )
     valid_dataset = Text_Dataset(
                                 data['X_valid'][data['field_names']].values,
                                 data['X_valid']['user_summary_merge_vector'].values,
-                                data['X_valid']['item_summary_vector'].values,
+                                data['X_valid']['book_summary_vector'].values,
                                 data['y_valid'].values
                                 ) if args.test_size != 0 else None
     test_dataset = Text_Dataset(
-                                data['text_test'][data['field_names']].values,
-                                data['text_test']['user_summary_merge_vector'].values,
-                                data['text_test']['item_summary_vector'].values,
+                                data['test'][data['field_names']].values,
+                                data['test']['user_summary_merge_vector'].values,
+                                data['test']['book_summary_vector'].values,
                                 )
 
 

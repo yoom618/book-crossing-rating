@@ -24,7 +24,9 @@ class DeepFM(nn.Module):
         self.dnn = MLP_Base(
                              input_dim=(args.embed_dim * len(self.field_dims)),
                              embed_dims=args.mlp_dims,
-                             dropout=args.dropout
+                             batchnorm=args.batchnorm,
+                             dropout=args.dropout,
+                             output_layer=True
                             )
 
 

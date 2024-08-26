@@ -13,10 +13,9 @@ def main(args):
     if args.model in ('FM', 'FFM', 'DeepFM', 'NCF', 'WDN', 'DCN'):
         # datatype = 'basic'
         datatype = 'context'
-    elif args.model in ('CNN_FM', 'CNN_DeepFM'):
+    elif args.model in ('Image_FM', 'Image_DeepFM'):
         datatype = 'image'
-    elif args.model == 'DeepCoNN':
-        import nltk
+    elif args.model in ('Text_FM', 'Text_DeepFM'):
         datatype = 'text'
     else:
         assert False, 'Not Implemented Model'
@@ -61,10 +60,7 @@ def main(args):
     ######################## SAVE PREDICT
     print(f'--------------- SAVE {args.model} PREDICT ---------------')
     submission = pd.read_csv(args.data_path + 'sample_submission.csv')
-    if args.model in ('FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN'):
-        submission['rating'] = predicts
-    else:
-        pass
+    submission['rating'] = predicts
 
     filename = setting.get_submit_filename(args)
     submission.to_csv(filename, index=False)
@@ -81,7 +77,7 @@ if __name__ == "__main__":
     ############### BASIC OPTION
     arg('--data_path', type=str, default='data/', help='Data path를 설정할 수 있습니다.')
     arg('--saved_model_path', type=str, default='./saved_models', help='Saved Model path를 설정할 수 있습니다.')
-    arg('--model', type=str, choices=['FM', 'FFM', 'DeepFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'CNN_DeepFM', 'DeepCoNN'],
+    arg('--model', type=str, choices=['FM', 'FFM', 'DeepFM', 'NCF', 'WDN', 'DCN', 'Image_FM', 'Image_DeepFM', 'Text_FM', 'Text_DeepFM'],
                                 help='학습 및 예측할 모델을 선택할 수 있습니다.')
     arg('--data_shuffle', type=bool, default=True, help='데이터 셔플 여부를 조정할 수 있습니다.')
     arg('--test_size', type=float, default=0.2, help='Train/Valid split 비율을 조정할 수 있습니다. 만약 0으로 설정하면 모두 Train 데이터로 사용합니다.')
@@ -110,34 +106,31 @@ if __name__ == "__main__":
     arg('--embed_dim', type=int, default=8, help='모든 모델에서 sparse feature를 dense하게 embedding시킬 차원을 조정할 수 있습니다.')
 
 
-    ############### MLP Parameter : NCF, WDN, DCN, DeepFM, CNN_DeepFM
-    arg('--dropout', type=float, default=0.2, help='MLP_Base를 활용하는 모델에서 Dropout rate를 조정할 수 있습니다.')
+    ############### MLP Parameter : NCF, WDN, DCN, DeepFM, Image_DeepFM, Text_DeepFM
     arg('--mlp_dims', type=list, default=[16, 32], help='MLP_Base를 활용하는 모델에서 MLP의 차원을 조정할 수 있습니다.')
+    arg('--batchnorm', type=bool, default=True, help='MLP_Base를 활용하는 모델에서 Batch Normalization 여부를 조정할 수 있습니다.')
+    arg('--dropout', type=float, default=0.2, help='MLP_Base를 활용하는 모델에서 Dropout rate를 조정할 수 있습니다.')
 
 
     ############### Cross Network Parameter : DCN
     arg('--cross_n_layers', type=int, default=3, help='Cross Network를 활용하는 모델에서 Cross Network의 레이어 수를 조정할 수 있습니다.')
 
 
-    ############### Image/Text Parameter : CNN_FM, CNN_DeepFM, DeepCoNN
-    arg('--kernel_size', type=int, default=3, help='CNN_FM, DEEP_CONN에서 CNN의 kernel 크기를 조정할 수 있습니다.')
-    arg('--stride', type=int, default=2, help='CNN_FM, DEEP_CONN에서 CNN의 stride 크기를 조정할 수 있습니다.')
-    arg('--padding', type=int, default=1, help='CNN_FM, DEEP_CONN에서 CNN의 padding 크기를 조정할 수 있습니다.')
-    arg('--dense_latent_dim', type=int, default=12, help='CNN_FM, DEEP_CONN에서 user/item/image에 대한 latent 차원을 조정할 수 있습니다.')
-
-
-    ############### Image Parameter : CNN_FM, CNN_DeepFM
+    ############### Image Parameter : Image_FM, Image_DeepFM
     arg('--img_size', type=int, default=224, help='이미지 전처리 시 이미지 크기를 조정할 수 있습니다.')
-    arg('--channel_list', type=list, default=[8, 16, 32], help='CNN_FM에서 CNN의 채널 수를 조정할 수 있습니다.')
+    arg('--kernel_size', type=int, default=3, help='CNN_Base를 활용하는 모델에서 CNN의 kernel 크기를 조정할 수 있습니다.')
+    arg('--channel_list', type=list, default=[8, 16, 32], help='CNN_Base를 활용하는 모델에서 CNN의 채널 수를 조정할 수 있습니다.')
+    arg('--stride', type=int, default=2, help='CNN_Base를 활용하는 모델에서 CNN의 stride 크기를 조정할 수 있습니다.')
+    arg('--padding', type=int, default=1, help='CNN_Base를 활용하는 모델에서 CNN의 padding 크기를 조정할 수 있습니다.')
+    arg('--cnn_batchnorm', type=bool, default=True, help='CNN_Base를 활용하는 모델에서 Batch Normalization 여부를 조정할 수 있습니다.')
+    arg('--cnn_dropout', type=float, default=0.2, help='CNN_Base를 활용하는 모델에서 CNN의 Dropout rate를 조정할 수 있습니다.')
 
 
-    ############### Text Parameter: DeepCoNN
+    ############### Text Parameter: Text_FM, Text_DeepFM
+    arg('--vector_create', type=bool, default=False, help='텍스트 기반 모델에서 text vector 생성 여부를 조정할 수 있으며 최초 학습에만 True로 설정하여야 합니다.')
     arg('--pretained_model', type=str, default='bert-base-uncased', help='책의 요약 정보를 임베딩하기 위한 pretrained model을 설정할 수 있습니다.')
-    arg('--vector_create', type=bool, default=False, help='DEEP_CONN에서 text vector 생성 여부를 조정할 수 있으며 최초 학습에만 True로 설정하여야합니다.')
-    arg('--word_dim', type=int, default=768, help='DEEP_CONN에서 1D conv의 입력 크기를 조정할 수 있습니다. (bert-base-uncased 기준 768)')
-    arg('--conv_1d_out_dim', type=int, default=32, help='DEEP_CONN에서 1D conv의 출력 크기를 조정할 수 있습니다.')
-    arg('--out_dim', type=int, default=50, help='DEEP_CONN에서 1D conv에 linear를 적용한 뒤 최종적으로 나오는 차원을 조정할 수 있습니다.')
-
+    arg('--word_dim', type=int, default=768, help='텍스트 기반 모델에서 pretained_model을 통해 나온 임베딩의 크기를 입력합니다. (bert-base-uncased 기준 768)')
+    
 
     args = parser.parse_args()
     main(args)

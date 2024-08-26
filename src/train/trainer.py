@@ -1,5 +1,5 @@
 import os
-from tqdm.auto import tqdm
+from tqdm import tqdm
 import torch
 import torch.nn as nn
 from torch.nn import MSELoss, L1Loss
@@ -46,10 +46,10 @@ def train(args, model, dataloader, logger, setting):
         total_loss, train_len = 0, len(dataloader['train_dataloader'])
 
         for data in dataloader['train_dataloader']:
-            if args.model == 'CNN_FM':
+            if args.model in ['Image_FM', 'Image_DeepFM']:
                 x, y = [data['user_book_vector'].to(args.device), data['img_vector'].to(args.device)], data['rating'].to(args.device)
-            elif args.model == 'DeepCoNN':
-                x, y = [data['user_book_vector'].to(args.device), data['user_summary_merge_vector'].to(args.device), data['item_summary_vector'].to(args.device)], data['rating'].to(args.device)
+            elif args.model in ('Text_FM', 'Text_DeepFM'):
+                x, y = [data['user_book_vector'].to(args.device), data['user_summary_vector'].to(args.device), data['book_summary_vector'].to(args.device)], data['rating'].to(args.device)
             else:
                 x, y = data[0].to(args.device), data[1].to(args.device)
             y_hat = model(x)
@@ -95,10 +95,10 @@ def valid(args, model, dataloader, loss_fn):
     batch = 0
 
     for data in dataloader:
-        if args.model == 'CNN_FM':
+        if args.model in ['Image_FM', 'Image_DeepFM']:
             x, y = [data['user_book_vector'].to(args.device), data['img_vector'].to(args.device)], data['rating'].to(args.device)
-        elif args.model == 'DeepCoNN':
-            x, y = [data['user_book_vector'].to(args.device), data['user_summary_merge_vector'].to(args.device), data['item_summary_vector'].to(args.device)], data['rating'].to(args.device)
+        elif args.model in ('Text_FM', 'Text_DeepFM'):
+            x, y = [data['user_book_vector'].to(args.device), data['user_summary_vector'].to(args.device), data['book_summary_vector'].to(args.device)], data['rating'].to(args.device)
         else:
             x, y = data[0].to(args.device), data[1].to(args.device)
         y_hat = model(x)
@@ -118,10 +118,10 @@ def test(args, model, dataloader, setting):
     model.eval()
 
     for data in dataloader['test_dataloader']:
-        if args.model == 'CNN_FM':
+        if args.model in ['Image_FM', 'Image_DeepFM']:
             x = [data['user_book_vector'].to(args.device), data['img_vector'].to(args.device)]
-        elif args.model == 'DeepCoNN':
-            x = [data['user_book_vector'].to(args.device), data['user_summary_merge_vector'].to(args.device), data['item_summary_vector'].to(args.device)]
+        elif args.model in ('Text_FM', 'Text_DeepFM'):
+            x = [data['user_book_vector'].to(args.device), data['user_summary_vector'].to(args.device), data['book_summary_vector'].to(args.device)]
         else:
             x = data[0].to(args.device)
         y_hat = model(x)

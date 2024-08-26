@@ -13,7 +13,7 @@ class NeuralCollaborativeFiltering(nn.Module):
         self.item_field_idx = [1]
         self.embedding = FeaturesEmbedding(self.field_dims, args.embed_dim)
         self.embed_output_dim = len(self.field_dims) * args.embed_dim
-        self.mlp = MLP_Base(self.embed_output_dim, args.mlp_dims, args.dropout, output_layer=False)
+        self.mlp = MLP_Base(self.embed_output_dim, args.mlp_dims, args.batchnorm, args.dropout)
         self.fc = nn.Linear(args.mlp_dims[-1] + args.embed_dim, 1)
 
 

@@ -1,0 +1,10 @@
+python main.py --model FM --device mps
+python main.py --model FFM --device mps
+python main.py --model DeepFM --device mps
+python main.py --model WDN --device mps
+python main.py --model DCN --device mps
+python main.py --model NCF --device mps
+python main.py --model Image_FM --device mps
+python main.py --model Image_DeepFM --device mps
+python main.py --model Text_FM --device mps
+python main.py --model Text_DeepFM --device mps
