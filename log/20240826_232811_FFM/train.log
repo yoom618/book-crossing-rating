@@ -1,0 +1,10 @@
+[2024-08-26 23:28:19,966] - epoch : 1/10 | train loss : 4.223 | valid loss : 2.373 | valid mse : 5.632 | valid mae : 1.834
+[2024-08-26 23:28:27,660] - epoch : 2/10 | train loss : 2.164 | valid loss : 2.227 | valid mse : 4.961 | valid mae : 1.699
+[2024-08-26 23:28:35,227] - epoch : 3/10 | train loss : 1.848 | valid loss : 2.237 | valid mse : 5.006 | valid mae : 1.721
+[2024-08-26 23:28:42,136] - epoch : 4/10 | train loss : 1.566 | valid loss : 2.282 | valid mse : 5.209 | valid mae : 1.759
+[2024-08-26 23:28:49,105] - epoch : 5/10 | train loss : 1.356 | valid loss : 2.323 | valid mse : 5.402 | valid mae : 1.803
+[2024-08-26 23:28:56,225] - epoch : 6/10 | train loss : 1.206 | valid loss : 2.346 | valid mse : 5.509 | valid mae : 1.822
+[2024-08-26 23:29:03,009] - epoch : 7/10 | train loss : 1.084 | valid loss : 2.358 | valid mse : 5.563 | valid mae : 1.825
+[2024-08-26 23:29:09,915] - epoch : 8/10 | train loss : 0.976 | valid loss : 2.379 | valid mse : 5.665 | valid mae : 1.847
+[2024-08-26 23:29:16,998] - epoch : 9/10 | train loss : 0.877 | valid loss : 2.385 | valid mse : 5.691 | valid mae : 1.848
+[2024-08-26 23:29:23,934] - epoch : 10/10 | train loss : 0.787 | valid loss : 2.395 | valid mse : 5.740 | valid mae : 1.860

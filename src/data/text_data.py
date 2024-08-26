@@ -88,24 +88,24 @@ def process_text_data(ratings, users, books, tokenizer, model, vector_create=Fal
         if not os.path.exists('./data/text_vector'):
             os.makedirs('./data/text_vector')
 
-        # print('Create Item Summary Vector')
-        # book_summary_vector_list = []
-        # for title, summary in tqdm(zip(books_['book_title'], books_['summary']), total=len(books_)):
-        #     # 책에 대한 텍스트 프롬프트는 아래와 같이 구성됨
-        #     # '''
-        #     # Book Title: {title}
-        #     # Summary: {summary}
-        #     # '''
-        #     prompt_ = f'Book Title: {title}\n Summary: {summary}\n'
-        #     vector = text_to_vector(prompt_, tokenizer, model)
-        #     book_summary_vector_list.append(vector)
+        print('Create Item Summary Vector')
+        book_summary_vector_list = []
+        for title, summary in tqdm(zip(books_['book_title'], books_['summary']), total=len(books_)):
+            # 책에 대한 텍스트 프롬프트는 아래와 같이 구성됨
+            # '''
+            # Book Title: {title}
+            # Summary: {summary}
+            # '''
+            prompt_ = f'Book Title: {title}\n Summary: {summary}\n'
+            vector = text_to_vector(prompt_, tokenizer, model)
+            book_summary_vector_list.append(vector)
         
-        # book_summary_vector_list = np.concatenate([
-        #                                         books_['isbn'].values.reshape(-1, 1),
-        #                                         np.asarray(book_summary_vector_list, dtype=np.float32)
-        #                                         ], axis=1)
+        book_summary_vector_list = np.concatenate([
+                                                books_['isbn'].values.reshape(-1, 1),
+                                                np.asarray(book_summary_vector_list, dtype=np.float32)
+                                                ], axis=1)
         
-        # np.save('./data/text_vector/book_summary_vector.npy', book_summary_vector_list)        
+        np.save('./data/text_vector/book_summary_vector.npy', book_summary_vector_list)        
 
 
         print('Create User Summary Merge Vector')

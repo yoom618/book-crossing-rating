@@ -1,1 +1,3 @@
 __pycache__
+data/text_vector/book_summary_vector.npy
+data/text_vector/user_summary_merge_vector.npy

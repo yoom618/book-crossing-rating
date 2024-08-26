@@ -1,0 +1,43 @@
+{
+    "data_path": "data/",
+    "saved_model_path": "./saved_models",
+    "model": "WDN",
+    "data_shuffle": true,
+    "test_size": 0.2,
+    "seed": 42,
+    "use_best_model": true,
+    "batch_size": 1024,
+    "epochs": 10,
+    "loss_fn": "RMSE",
+    "metric": [
+        "MSE",
+        "MAE"
+    ],
+    "optimizer": "ADAM",
+    "lr": 0.001,
+    "weight_decay": 1e-06,
+    "lr_scheduler": "",
+    "device": "mps",
+    "embed_dim": 8,
+    "mlp_dims": [
+        16,
+        32
+    ],
+    "batchnorm": true,
+    "dropout": 0.2,
+    "cross_n_layers": 3,
+    "img_size": 224,
+    "kernel_size": 3,
+    "channel_list": [
+        8,
+        16,
+        32
+    ],
+    "stride": 2,
+    "padding": 1,
+    "cnn_batchnorm": true,
+    "cnn_dropout": 0.2,
+    "vector_create": false,
+    "pretained_model": "bert-base-uncased",
+    "word_dim": 768
+}
