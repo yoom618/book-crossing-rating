@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from ._helpers import FeaturesEmbedding, MultiLayerPerceptron
+from ._helpers import FeaturesEmbedding, MLP_Base
 
 
 # user와 item의 latent factor를 활용하여 GMF를 구현합니다.
@@ -13,7 +13,7 @@ class NeuralCollaborativeFiltering(nn.Module):
         self.item_field_idx = [1]
         self.embedding = FeaturesEmbedding(self.field_dims, args.embed_dim)
         self.embed_output_dim = len(self.field_dims) * args.embed_dim
-        self.mlp = MultiLayerPerceptron(self.embed_output_dim, args.mlp_dims, args.dropout, output_layer=False)
+        self.mlp = MLP_Base(self.embed_output_dim, args.mlp_dims, args.dropout, output_layer=False)
         self.fc = nn.Linear(args.mlp_dims[-1] + args.embed_dim, 1)
 
 

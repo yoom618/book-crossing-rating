@@ -43,16 +43,14 @@ def text_to_vector(text, tokenizer, model):
     """
     for sent in tokenize.sent_tokenize(text):
         text_ = "[CLS] " + sent + " [SEP]"
-        tokenized = tokenizer.tokenize(text_)
-        indexed = tokenizer.convert_tokens_to_ids(tokenized)
-        segments_idx = [1] * len(tokenized)
-        token_tensor = torch.tensor([indexed], device=model.device)
-        sgments_tensor = torch.tensor([segments_idx], device=model.device)
+        tokenized = tokenizer.encode(text_, add_special_tokens=True)
+        token_tensor = torch.tensor([tokenized], device=model.device)
         with torch.no_grad():
-            outputs = model(token_tensor, sgments_tensor)
-            encode_layers = outputs[0]
-            sentence_embedding = torch.mean(encode_layers[0], dim=0)
-    return sentence_embedding.cpu().detach().numpy()
+            outputs = model(token_tensor)  # attention_mask를 사용하지 않아도 됨
+            ### BERT 모델의 경우, 최종 출력물의 사이즈가 (토큰길이, 임베딩=768)이므로, 이를 평균내어 사용하거나 pooler_output을 사용하여 [CLS] 토큰의 임베딩만 사용
+            # sentence_embedding = torch.mean(outputs.last_hidden_state[0], dim=0)  # 방법1) 모든 토큰의 임베딩을 평균내어 사용
+            sentence_embedding = outputs.pooler_output.squeeze(0)  # 방법2) pooler_output을 사용하여 맨 첫 토큰인 [CLS] 토큰의 임베딩만 사용
+    return sentence_embedding.cpu().detach().numpy() 
 
 
 def process_text_data(ratings, users, books, tokenizer, model, vector_create=False):
@@ -68,11 +66,13 @@ def process_text_data(ratings, users, books, tokenizer, model, vector_create=Fal
 
     Returns
     -------
-    users_ : pd.DataFrame
+    `users_` : pd.DataFrame
         각 유저가 읽은 책에 대한 요약 정보를 병합 및 벡터화하여 추가한 데이터 프레임을 반환합니다.
-    books_ : pd.DataFrame
+
+    `books_` : pd.DataFrame
         텍스트 데이터를 벡터화하여 추가한 데이터 프레임을 반환합니다.
     """
+    num2txt = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five']
     users_ = users.copy()
     books_ = books.copy()
     nan_value = 'None'
@@ -89,30 +89,48 @@ def process_text_data(ratings, users, books, tokenizer, model, vector_create=Fal
         if not os.path.exists('./data/text_vector'):
             os.makedirs('./data/text_vector')
 
-        print('Create Item Summary Vector')
-        item_summary_vector_list = []
-        for title, summary in tqdm(zip(books_['book_title'], books_['summary']), total=len(books_)):
-            prompt_ = f'Book Title: {title}\n Summary: {summary}\n'
-            vector = text_to_vector(prompt_, tokenizer, model)
-            item_summary_vector_list.append(vector)
+        # print('Create Item Summary Vector')
+        # item_summary_vector_list = []
+        # for title, summary in tqdm(zip(books_['book_title'], books_['summary']), total=len(books_)):
+        #     # 책에 대한 텍스트 프롬프트는 아래와 같이 구성됨
+        #     # '''
+        #     # Book Title: {title}
+        #     # Summary: {summary}
+        #     # '''
+        #     prompt_ = f'Book Title: {title}\n Summary: {summary}\n'
+        #     vector = text_to_vector(prompt_, tokenizer, model)
+        #     item_summary_vector_list.append(vector)
         
-        print(books_['isbn'].values.shape, np.asarray(item_summary_vector_list).shape)
-        item_summary_vector_list = np.concatenate([
-                                                   books_['isbn'].values.reshape(-1, 1),
-                                                   np.asarray(item_summary_vector_list)
-                                                  ], axis=1)
+        # item_summary_vector_list = np.concatenate([
+        #                                         books_['isbn'].values.reshape(-1, 1),
+        #                                         np.asarray(item_summary_vector_list)
+        #                                         ], axis=1)
         
-        np.save('./data/text_vector/item_summary_vector.npy', item_summary_vector_list)        
+        # np.save('./data/text_vector/item_summary_vector.npy', item_summary_vector_list)        
+
 
         print('Create User Summary Merge Vector')
         user_summary_merge_vector_list = []
         for books_read in tqdm(users_['books_read']):
-            read_books = books_[books_['isbn'].isin(books_read)]['book_title', 'summary', 'review_count']
+            if books_read is np.nan:  # 유저가 읽은 책이 없는 경우, 텍스트 임베딩을 0으로 처리
+                user_summary_merge_vector_list.append(np.zeros((768)))
+                continue
+            
+            read_books = books_[books_['isbn'].isin(books_read)][['book_title', 'summary', 'review_count']]
             read_books = read_books.sort_values('review_count', ascending=False).head(5)  # review_count가 높은 순으로 5개의 책을 선택
-            prompt_ = 'Five Books That You Read\n'
+            # 유저에 대한 텍스트 프롬프트는 아래와 같이 구성됨
+            # '''
+            # Five Books That You Read
+            # 1. Book Title: {title}
+            # Summary: {summary}
+            # ...
+            # 5. Book Title: {title}
+            # Summary: {summary}
+            # '''
+            prompt_ = f'{num2txt[len(read_books)]} Books That You Read\n'
             for idx, (title, summary) in enumerate(zip(read_books['book_title'], read_books['summary'])):
                 summary = summary if len(summary) < 100 else f'{summary[:100]} ...'
-                prompt_ += f'{idx}. Book Title: {title}\n Summary: {summary}\n'
+                prompt_ += f'{idx+1}. Book Title: {title}\n Summary: {summary}\n'
             vector = text_to_vector(prompt_, tokenizer, model)
             user_summary_merge_vector_list.append(vector)
         
@@ -166,7 +184,12 @@ class Text_Dataset(Dataset):
                 'user_book_vector' : torch.tensor(self.user_book_vector[i], dtype=torch.long),
                 'user_summary_vector' : torch.tensor(self.user_summary_vector[i].reshape(-1, 1), dtype=torch.float32),
                 'book_summary_vector' : torch.tensor(self.item_summary_vector[i].reshape(-1, 1), dtype=torch.float32),
-                'rating' : torch.tensor(self.rating[i], dtype=torch.float32) if self.rating is not None else None,
+                'rating' : torch.tensor(self.rating[i], dtype=torch.float32),
+                } if self.rating is not None else \
+                {
+                'user_book_vector' : torch.tensor(self.user_book_vector[i], dtype=torch.long),
+                'user_summary_vector' : torch.tensor(self.user_summary_vector[i].reshape(-1, 1), dtype=torch.float32),
+                'book_summary_vector' : torch.tensor(self.item_summary_vector[i].reshape(-1, 1), dtype=torch.float32),
                 }
 
 
@@ -194,7 +217,8 @@ def text_data_load(args):
     sub = pd.read_csv(args.data_path + 'sample_submission.csv')
 
     tokenizer = AutoTokenizer.from_pretrained(args.pretained_model)
-    model = AutoModel.from_pretrained(args.pretained_model)
+    model = AutoModel.from_pretrained(args.pretained_model).to(device=args.device)
+    model.eval()
     users_, books_ = process_text_data(train, users, books, tokenizer, model, args.vector_create)
 
     # 유저 및 책 정보를 합쳐서 데이터 프레임 생성 (단, 베이스라인에서는 user_id, isbn, user_summary_merge_vector, item_summary_vector만 사용함)

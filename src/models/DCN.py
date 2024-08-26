@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from ._helpers import FeaturesEmbedding, MultiLayerPerceptron
+from ._helpers import FeaturesEmbedding, MLP_Base
 
 
 # cross product transformation을 구현합니다.
@@ -31,8 +31,8 @@ class DeepCrossNetwork(nn.Module):
         self.field_dims = data['field_dims']
         self.embedding = FeaturesEmbedding(self.field_dims, args.embed_dim)
         self.embed_output_dim = len(self.field_dims) * args.embed_dim
-        self.cn = CrossNetwork(self.embed_output_dim, args.num_layers)
-        self.mlp = MultiLayerPerceptron(self.embed_output_dim, args.mlp_dims, args.dropout, output_layer=False)
+        self.cn = CrossNetwork(self.embed_output_dim, args.cross_n_layers)
+        self.mlp = MLP_Base(self.embed_output_dim, args.mlp_dims, args.dropout, output_layer=False)
         self.cd_linear = nn.Linear(args.mlp_dims[-1], 1, bias=False)
 
 

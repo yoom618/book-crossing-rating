@@ -29,7 +29,11 @@ class Image_Dataset(Dataset):
         return {
                 'user_book_vector' : torch.tensor(self.user_book_vector[i], dtype=torch.long),
                 'img_vector' : torch.tensor(self.img_vector[i], dtype=torch.float32),
-                'rating' : torch.tensor(self.rating[i], dtype=torch.float32) if self.rating is not None else None,
+                'rating' : torch.tensor(self.rating[i], dtype=torch.float32)
+                } if self.rating is not None else \
+                {
+                'user_book_vector' : torch.tensor(self.user_book_vector[i], dtype=torch.long),
+                'img_vector' : torch.tensor(self.img_vector[i], dtype=torch.float32)
                 }
 
 

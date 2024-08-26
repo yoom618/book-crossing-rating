@@ -58,12 +58,32 @@ class FeaturesLinear(nn.Module):
 
 
 
+# dense feature 사이의 상호작용을 효율적으로 계산합니다.
+# 사용되는 모델 : DeepFM, CNN_FM, CNN_DeepFM, DeepCoNN
+class FMLayer_Dense(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def square(self, x:torch.Tensor):
+        return torch.pow(x,2)
+
+    def forward(self, x):
+        # square_of_sum =   # FILL HERE : Use `torch.sum()` and `self.square()` #
+        # sum_of_square =   # FILL HERE : Use `torch.sum()` and `self.square()` #
+        square_of_sum = self.square(torch.sum(x, dim=1))
+        sum_of_square = torch.sum(self.square(x), dim=1)
+        
+        return 0.5 * torch.sum(square_of_sum - sum_of_square, dim=1)
+    
+
+
 # sparse feature 사이의 상호작용을 효율적으로 계산합니다.
 # 사용되는 모델 : FM
 class FMLayer_Sparse(nn.Module):
     def __init__(self, field_dims:list, factor_dim:int):
         super().__init__()
         self.embedding = FeaturesEmbedding(field_dims, factor_dim)
+        self.fm = FMLayer_Dense()
 
 
     def square(self, x):
@@ -71,38 +91,33 @@ class FMLayer_Sparse(nn.Module):
     
 
     def forward(self, x: torch.Tensor):
-        # x =               # FILL HERE : Use `self.embedding` #
-        # square_of_sum =   # FILL HERE : Use `torch.sum()` and `self.square()` #
-        # sum_of_square =   # FILL HERE : Use `torch.sum()` and `self.square()` #
         x = self.embedding(x)
-        square_of_sum = self.square(torch.sum(x, dim=1))
-        sum_of_square = torch.sum(self.square(x), dim=1)
+        x = self.fm(x)
         
-        return 0.5 * torch.sum(square_of_sum - sum_of_square, dim=1)
-    
+        return x
 
-# dense feature 사이의 상호작용을 효율적으로 계산합니다. (first-order도 포함)
-# 사용되는 모델 : DeepCoNN, CNN-FM
-class FMLayer_Dense(nn.Module):
-    def __init__(self, input_dim, latent_dim):
-        super().__init__()
-        self.v = nn.Parameter(torch.rand(input_dim, latent_dim))
 
-    def square(self, x:torch.Tensor):
-        return torch.pow(x,2)
 
-    def forward(self, x):
-        square_of_matmul = self.square(torch.mm(x, self.v))
-        matmul_of_square = torch.mm(self.square(x), self.square(self.v))
+# class FMLayer_Original(nn.Module):
+#     def __init__(self, input_dim, latent_dim):
+#         super().__init__()
+#         self.v = nn.Parameter(torch.rand(input_dim, latent_dim))
+
+#     def square(self, x:torch.Tensor):
+#         return torch.pow(x,2)
+
+#     def forward(self, x):
+#         square_of_matmul = self.square(torch.mm(x, self.v))
+#         matmul_of_square = torch.mm(self.square(x), self.square(self.v))
         
 
-        return 0.5 * torch.sum(square_of_matmul - matmul_of_square, dim=1)
+#         return 0.5 * torch.sum(square_of_matmul - matmul_of_square, dim=1)
     
 
 
 # 기본적인 형태의 MLP를 구현합니다.
-# 사용되는 모델 : WDN, DCN, NCF
-class MultiLayerPerceptron(nn.Module):
+# 사용되는 모델 : DeepFM, CNN_DeepFM, WDN, DCN, NCF
+class MLP_Base(nn.Module):
     def __init__(self, input_dim, embed_dims, dropout, output_layer=True):
         super().__init__()
         layers = list()
@@ -122,7 +137,7 @@ class MultiLayerPerceptron(nn.Module):
 
 
 # 기본적인 형태의 CNN을 정의합니다. 이미지 데이터의 특징을 추출하기 위해 사용됩니다.
-# 사용되는 모델 : CNN-FM
+# 사용되는 모델 : CNN_FM, CNN_DeepFM
 class CNN_Base(nn.Module):
     def __init__(self, input_size=(3, 64, 64), 
                  channel_list=[8,16,32], kernel_size=3, stride=2, padding=1):
@@ -149,7 +164,6 @@ class CNN_Base(nn.Module):
         
 
     def forward(self, x):
-        x = self.cnn(x)
-        x = x.view(-1, x.size(1) * x.size(2) * x.size(3))
+        x = self.cnn(x)  # (batch_size, out_channel, H, W)
 
         return x

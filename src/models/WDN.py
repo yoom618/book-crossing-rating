@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from ._helpers import FeaturesEmbedding, FeaturesLinear, MultiLayerPerceptron
+from ._helpers import FeaturesEmbedding, FeaturesLinear, MLP_Base
 
 
 # Wide: memorization을 담당하는 generalized linear model
@@ -14,7 +14,7 @@ class WideAndDeep(nn.Module):
         self.linear = FeaturesLinear(self.field_dims)
         self.embedding = FeaturesEmbedding(self.field_dims, args.embed_dim)
         self.embed_output_dim = len(self.field_dims) * args.embed_dim
-        self.mlp = MultiLayerPerceptron(self.embed_output_dim, args.mlp_dims, args.dropout)
+        self.mlp = MLP_Base(self.embed_output_dim, args.mlp_dims, args.dropout)
 
 
     def forward(self, x: torch.Tensor):

@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from ._helpers import FeaturesLinear, FMLayer_Sparse
+from ._helpers import FeaturesLinear, FMLayer_Sparse, MLP_Base
 
     
 
@@ -22,5 +22,3 @@ class FactorizationMachine(nn.Module):
         y = self.linear(x).squeeze(1) + self.fm(x)
 
         return y
-
-

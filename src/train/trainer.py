@@ -117,11 +117,11 @@ def test(args, model, dataloader, setting):
         pass
     model.eval()
 
-    for idx, data in enumerate(dataloader['test_dataloader']):
+    for data in dataloader['test_dataloader']:
         if args.model == 'CNN_FM':
-            x, _ = [data['user_book_vector'].to(args.device), data['img_vector'].to(args.device)], data['rating'].to(args.device)
+            x = [data['user_book_vector'].to(args.device), data['img_vector'].to(args.device)]
         elif args.model == 'DeepCoNN':
-            x, _ = [data['user_book_vector'].to(args.device), data['user_summary_merge_vector'].to(args.device), data['item_summary_vector'].to(args.device)], data['rating'].to(args.device)
+            x = [data['user_book_vector'].to(args.device), data['user_summary_merge_vector'].to(args.device), data['item_summary_vector'].to(args.device)]
         else:
             x = data[0].to(args.device)
         y_hat = model(x)
