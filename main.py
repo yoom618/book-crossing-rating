@@ -48,13 +48,19 @@ def main(args):
 
 
     ######################## TRAIN
-    print(f'--------------- {args.model} TRAINING ---------------')
-    model = train(args, model, data, logger, setting)
+    if not args.test:
+        print(f'--------------- {args.model} TRAINING ---------------')
+        model = train(args, model, data, logger, setting)
 
 
     ######################## INFERENCE
-    print(f'--------------- {args.model} PREDICT ---------------')
-    predicts = test(args, model, data, setting)
+    if not args.test:
+        print(f'--------------- {args.model} PREDICT ---------------')
+        predicts = test(args, model, data, setting)
+    else:
+        print(f'--------------- {args.saved_time}_{args.model} PREDICT ---------------')
+        setting.save_time = args.saved_time
+        predicts = test(args, model, data, setting)
 
 
     ######################## SAVE PREDICT
@@ -75,6 +81,8 @@ if __name__ == "__main__":
 
 
     ############### BASIC OPTION
+    arg('--test', type=bool, default=False, help='학습을 생략할지 여부를 설정할 수 있습니다.')
+    arg('--saved_time', type=str, default='', help='학습을 생략할 때 사용할 모델의 시간을 설정할 수 있습니다. (YYYYMMDD_HHMMSS_FM.pt -> YYYYMMDD_HHMMSS)')
     arg('--data_path', type=str, default='data/', help='Data path를 설정할 수 있습니다.')
     arg('--saved_model_path', type=str, default='./saved_models', help='Saved Model path를 설정할 수 있습니다.')
     arg('--model', type=str, choices=['FM', 'FFM', 'DeepFM', 'NCF', 'WDN', 'DCN', 'Image_FM', 'Image_DeepFM', 'Text_FM', 'Text_DeepFM'],
@@ -96,14 +104,12 @@ if __name__ == "__main__":
     arg('--lr_scheduler', type=str, default='', choices=['', 'ReduceLROnPlateau', 'StepLR'], help='Learning Rate Scheduler를 변경할 수 있습니다.')
     
     
-
-
     ############### GPU
     arg('--device', type=str, default='cuda', choices=['cuda', 'cpu', 'mps'], help='학습에 사용할 Device를 조정할 수 있습니다.')
 
 
     ############### Common Option : All Models
-    arg('--embed_dim', type=int, default=8, help='모든 모델에서 sparse feature를 dense하게 embedding시킬 차원을 조정할 수 있습니다.')
+    arg('--embed_dim', type=int, default=16, help='모든 모델에서 sparse feature를 dense하게 embedding시킬 차원을 조정할 수 있습니다.')
 
 
     ############### MLP Parameter : NCF, WDN, DCN, DeepFM, Image_DeepFM, Text_DeepFM

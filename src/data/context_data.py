@@ -82,7 +82,8 @@ def process_context_data(users, books):
 
     users_ = users.copy()
     books_ = books.copy()
-    # 데이터 전처리 (정답은 아닙니다.)
+
+    # 데이터 전처리 (전처리는 각자의 상황에 맞게 진행해주세요!)
     books_['category'] = books_['category'].apply(lambda x: str2list(x)[0] if not pd.isna(x) else 'unknown')
     books_['language'] = books_['language'].fillna(books_['language'].mode()[0])
 
@@ -120,11 +121,12 @@ def context_data_load(args):
     users_, books_ = process_context_data(users, books)
     
     
-    # 사용할 컬럼(모두 카테고리)만 추출하여 데이터 조인
+    # 사용할 컬럼을 여기서 선택합니다.
     user_features = ['age_range', 'location_country', 'location_state', 'location_city']
     book_features = ['book_author', 'publisher', 'language', 'category']
     features_col = list(set(['user_id', 'isbn'] + user_features + book_features))
 
+    # 선택한 컬럼만 추출하여 데이터 조인
     train_df = train.merge(users_[user_features + ['user_id']], on='user_id', how='left')\
                     .merge(books_[book_features + ['isbn']], on='isbn', how='left')
     test_df = test.merge(users_[user_features + ['user_id']], on='user_id', how='left')\
