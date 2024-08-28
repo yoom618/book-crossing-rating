@@ -83,9 +83,10 @@ def process_context_data(users, books):
 
     # 데이터 전처리 (전처리는 각자의 상황에 맞게 진행해주세요!)
     books_['category'] = books_['category'].apply(lambda x: str2list(x)[0] if not pd.isna(x) else 'unknown')
-    books_['language'] = books_['language'].fillna(books_['language'].mean())
+    books_['language'] = books_['language'].fillna(books_['language'].mode()[0])
 
-    users_['age_range'] = users_['age'].apply(lambda x: age_map(x) if not pd.isna(x) else 0)
+    users_['age'] = users_['age'].fillna(users_['age'].mode()[0])
+    users_['age_range'] = users_['age'].apply(lambda x: age_map(x))
 
     users_['location_list'] = users_['location'].apply(lambda x: split_location(x)) 
     users_['location_country'] = users_['location_list'].apply(lambda x: x[0])
