@@ -111,7 +111,7 @@ def process_text_data(ratings, users, books, tokenizer, model, vector_create=Fal
         print('Create User Summary Merge Vector')
         user_summary_merge_vector_list = []
         for books_read in tqdm(users_['books_read']):
-            if books_read is np.nan:  # 유저가 읽은 책이 없는 경우, 텍스트 임베딩을 0으로 처리
+            if pd.isna(books_read):  # 유저가 읽은 책이 없는 경우, 텍스트 임베딩을 0으로 처리
                 user_summary_merge_vector_list.append(np.zeros((768)))
                 continue
             
