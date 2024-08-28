@@ -89,10 +89,32 @@ def process_context_data(users, books):
 
     users_['age_range'] = users_['age'].apply(lambda x: age_map(x) if not pd.isna(x) else 0)
 
-    users_['location_list'] = users_['location'].apply(lambda x: split_location(x))
+    users_['location_list'] = users_['location'].apply(lambda x: split_location(x)) 
     users_['location_country'] = users_['location_list'].apply(lambda x: x[0])
     users_['location_state'] = users_['location_list'].apply(lambda x: x[1] if len(x) > 1 else np.nan)
     users_['location_city'] = users_['location_list'].apply(lambda x: x[2] if len(x) > 2 else np.nan)
+
+    for idx, row in users_.iterrows():
+        if (not pd.isna(row['location_state'])) and pd.isna(row['location_country']):
+            fill_country = users_[users_['location_state'] == row['location_state']]['location_country'].mode()
+            fill_country = fill_country[0] if len(fill_country) > 0 else np.nan
+            users_.loc[idx, 'location_country'] = fill_country
+        elif (not pd.isna(row['location_city'])) and pd.isna(row['location_state']):
+            if not pd.isna(row['location_country']):
+                fill_state = users_[(users_['location_country'] == row['location_country']) 
+                                    & (users_['location_city'] == row['location_city'])]['location_state'].mode()
+                fill_state = fill_state[0] if len(fill_state) > 0 else np.nan
+                users_.loc[idx, 'location_state'] = fill_state
+            else:
+                fill_state = users_[users_['location_city'] == row['location_city']]['location_state'].mode()
+                fill_state = fill_state[0] if len(fill_state) > 0 else np.nan
+                fill_country = users_[users_['location_city'] == row['location_city']]['location_country'].mode()
+                fill_country = fill_country[0] if len(fill_country) > 0 else np.nan
+                users_.loc[idx, 'location_country'] = fill_country
+                users_.loc[idx, 'location_state'] = fill_state
+
+               
+    
     users_ = users_.drop(['location'], axis=1)
 
     return users_, books_
@@ -123,7 +145,7 @@ def context_data_load(args):
     
     # 사용할 컬럼을 여기서 선택합니다.
     user_features = ['age_range', 'location_country', 'location_state', 'location_city']
-    book_features = ['book_author', 'publisher', 'language', 'category']
+    book_features = ['book_title', 'book_author', 'publisher', 'language', 'category']
     features_col = list(set(['user_id', 'isbn'] + user_features + book_features))
 
     # 선택한 컬럼만 추출하여 데이터 조인
