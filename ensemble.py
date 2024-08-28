@@ -85,7 +85,7 @@ if __name__ == "__main__":
     arg('--ensemble_weight', nargs='+',default=None,
         type=lambda s: [float(item) for item in s.split(',')],
         help='optional: weighted 앙상블 전략에서 각 결과값의 가중치를 조정할 수 있습니다.')
-    arg('--result_path',type=str, default='./submit/',
-        help='optional: 앙상블할 파일이 존재하는 경로를 전달합니다. (default:"./submit/")')
+    arg('--result_path',type=str, default='saved/submit/',
+        help='optional: 앙상블할 파일이 존재하는 경로를 전달합니다. (default:"saved/submit/")')
     args = parser.parse_args()
     main(args)

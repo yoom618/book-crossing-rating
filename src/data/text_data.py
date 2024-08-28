@@ -196,11 +196,11 @@ def text_data_load(args):
     """
     Parameters
     ----------
-    args.data_path : str
+    args.dataset.data_path : str
         데이터 경로를 설정할 수 있는 parser
-    args.pretained_model : str
+    args.model_args[args.model].pretrained_model : str
         사전학습된 모델을 설정할 수 있는 parser
-    args.vector_create : bool
+    args.model_args[args.model].vector_create : bool
         텍스트 데이터 벡터화 및 저장 여부를 설정할 수 있는 parser
         False로 설정하면 기존에 저장된 벡터를 불러옵니다.
 
@@ -209,18 +209,19 @@ def text_data_load(args):
     data : dict
         학습 및 테스트 데이터가 담긴 사전 형식의 데이터를 반환합니다.
     """
-    users = pd.read_csv(args.data_path + 'users.csv')
-    books = pd.read_csv(args.data_path + 'books.csv')
-    train = pd.read_csv(args.data_path + 'train_ratings.csv')
-    test = pd.read_csv(args.data_path + 'test_ratings.csv')
-    sub = pd.read_csv(args.data_path + 'sample_submission.csv')
+    users = pd.read_csv(args.dataset.data_path + 'users.csv')
+    books = pd.read_csv(args.dataset.data_path + 'books.csv')
+    train = pd.read_csv(args.dataset.data_path + 'train_ratings.csv')
+    test = pd.read_csv(args.dataset.data_path + 'test_ratings.csv')
+    sub = pd.read_csv(args.dataset.data_path + 'sample_submission.csv')
 
-    tokenizer = AutoTokenizer.from_pretrained(args.pretained_model)
-    model = AutoModel.from_pretrained(args.pretained_model).to(device=args.device)
+    tokenizer = AutoTokenizer.from_pretrained(args.model_args[args.model].pretrained_model)
+    model = AutoModel.from_pretrained(args.model_args[args.model].pretrained_model).to(device=args.device)
     model.eval()
-    users_, books_ = process_text_data(train, users, books, tokenizer, model, args.vector_create)
+    users_, books_ = process_text_data(train, users, books, tokenizer, model, args.model_args[args.model].vector_create)
 
     # 유저 및 책 정보를 합쳐서 데이터 프레임 생성 (단, 베이스라인에서는 user_id, isbn, user_summary_merge_vector, book_summary_vector만 사용함)
+    # 사용할 컬럼을 user_features와 book_features에 정의합니다. (단, 모두 범주형 데이터로 가정)
     user_features = []
     book_features = []
     features_col = list(set(['user_id', 'isbn'] + user_features + book_features))  # unique한 feature들만 추출
@@ -264,11 +265,13 @@ def text_data_loader(args, data):
     """
     Parameters
     ----------
-    args.batch_size : int
+    args.dataloader.batch_size : int
         데이터 batch에 사용할 데이터 사이즈
-    args.data_shuffle : bool
+    args.dataloader.shuffle : bool
         data shuffle 여부
-    args.test_size : float
+    args.dataloader.num_workers: int
+        dataloader에서 사용할 멀티프로세서 수
+    args.dataset.valid_ratio : float
         Train/Valid split 비율로, 0일 경우에 대한 처리를 위해 사용
     data : dict
         text_data_load()에서 반환된 데이터
@@ -289,7 +292,7 @@ def text_data_loader(args, data):
                                 data['X_valid']['user_summary_merge_vector'].values,
                                 data['X_valid']['book_summary_vector'].values,
                                 data['y_valid'].values
-                                ) if args.test_size != 0 else None
+                                ) if args.dataset.valid_ratio != 0 else None
     test_dataset = Text_Dataset(
                                 data['test'][data['field_names']].values,
                                 data['test']['user_summary_merge_vector'].values,
@@ -297,9 +300,9 @@ def text_data_loader(args, data):
                                 )
 
 
-    train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=0, shuffle=args.data_shuffle)
-    valid_dataloader = DataLoader(valid_dataset, batch_size=args.batch_size, num_workers=0, shuffle=args.data_shuffle) if args.test_size != 0 else None
-    test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, num_workers=0, shuffle=False)
+    train_dataloader = DataLoader(train_dataset, batch_size=args.dataloader.batch_size, shuffle=args.dataloader.shuffle, num_workers=args.dataloader.num_workers)
+    valid_dataloader = DataLoader(valid_dataset, batch_size=args.dataloader.batch_size, shuffle=False, num_workers=args.dataloader.num_workers) if args.dataset.valid_ratio != 0 else None
+    test_dataloader = DataLoader(test_dataset, batch_size=args.dataloader.batch_size, shuffle=False, num_workers=args.dataloader.num_workers)
     data['train_dataloader'], data['valid_dataloader'], data['test_dataloader'] = train_dataloader, valid_dataloader, test_dataloader
     
     return data

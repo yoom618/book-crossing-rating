@@ -7,7 +7,7 @@ def basic_data_load(args):
     """
     Parameters
     ----------
-    args.data_path : str
+    args.dataset.data_path : str
         데이터 경로를 설정할 수 있는 parser
     
     Returns
@@ -17,11 +17,11 @@ def basic_data_load(args):
     """
 
     ######################## DATA LOAD
-    # users = pd.read_csv(args.data_path + 'users.csv')
-    # books = pd.read_csv(args.data_path + 'books.csv')
-    train_df = pd.read_csv(args.data_path + 'train_ratings.csv')
-    test_df = pd.read_csv(args.data_path + 'test_ratings.csv')
-    sub = pd.read_csv(args.data_path + 'sample_submission.csv')
+    # users = pd.read_csv(args.dataset.data_path + 'users.csv')
+    # books = pd.read_csv(args.dataset.data_path + 'books.csv')
+    train_df = pd.read_csv(args.dataset.data_path + 'train_ratings.csv')
+    test_df = pd.read_csv(args.dataset.data_path + 'test_ratings.csv')
+    sub = pd.read_csv(args.dataset.data_path + 'sample_submission.csv')
 
     all_df = pd.concat([train_df, test_df], axis=0)
 
@@ -55,7 +55,7 @@ def basic_data_split(args, data):
     """
     Parameters
     ----------
-    args.test_size : float
+    args.dataset.valid_ratio : float
         Train/Valid split 비율을 입력합니다.
     args.seed : int
         데이터 셔플 시 사용할 seed 값을 입력합니다.
@@ -65,7 +65,7 @@ def basic_data_split(args, data):
     data : dict
         data 내의 학습 데이터를 학습/검증 데이터로 나누어 추가한 후 반환합니다.
     """
-    if args.test_size == 0:
+    if args.dataset.valid_ratio == 0:
         data['X_train'] = data['train'].drop('rating', axis=1)
         data['y_train'] = data['train']['rating']
 
@@ -73,7 +73,7 @@ def basic_data_split(args, data):
         X_train, X_valid, y_train, y_valid = train_test_split(
                                                             data['train'].drop(['rating'], axis=1),
                                                             data['train']['rating'],
-                                                            test_size=args.test_size,
+                                                            test_size=args.dataset.valid_ratio,
                                                             random_state=args.seed,
                                                             shuffle=True
                                                             )
@@ -86,11 +86,13 @@ def basic_data_loader(args, data):
     """
     Parameters
     ----------
-    args.batch_size : int
+    args.dataloader.batch_size : int
         데이터 batch에 사용할 데이터 사이즈
-    args.data_shuffle : bool
+    args.dataloader.shuffle : bool
         data shuffle 여부
-    args.test_size : float
+    args.dataloader.num_workers: int
+        dataloader에서 사용할 멀티프로세서 수
+    args.dataset.valid_ratio : float
         Train/Valid split 비율로, 0일 경우에 대한 처리를 위해 사용합니다.
     data : dict
         basic_data_split 함수에서 반환된 데이터
@@ -102,12 +104,12 @@ def basic_data_loader(args, data):
     """
 
     train_dataset = TensorDataset(torch.LongTensor(data['X_train'].values), torch.LongTensor(data['y_train'].values))
-    valid_dataset = TensorDataset(torch.LongTensor(data['X_valid'].values), torch.LongTensor(data['y_valid'].values)) if args.test_size != 0 else None
+    valid_dataset = TensorDataset(torch.LongTensor(data['X_valid'].values), torch.LongTensor(data['y_valid'].values)) if args.dataset.valid_ratio != 0 else None
     test_dataset = TensorDataset(torch.LongTensor(data['test'].values))
 
-    train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=args.data_shuffle)
-    valid_dataloader = DataLoader(valid_dataset, batch_size=args.batch_size, shuffle=args.data_shuffle) if args.test_size != 0 else None
-    test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
+    train_dataloader = DataLoader(train_dataset, batch_size=args.dataloader.batch_size, shuffle=args.dataloader.shuffle, num_workers=args.dataloader.num_workers)
+    valid_dataloader = DataLoader(valid_dataset, batch_size=args.dataloader.batch_size, shuffle=False, num_workers=args.dataloader.num_workers) if args.dataset.valid_ratio != 0 else None
+    test_dataloader = DataLoader(test_dataset, batch_size=args.dataloader.batch_size, shuffle=False, num_workers=args.dataloader.num_workers)
 
     data['train_dataloader'], data['valid_dataloader'], data['test_dataloader'] = train_dataloader, valid_dataloader, test_dataloader
 

@@ -1,23 +1,29 @@
 ######## 기본 베이스라인 실행 스크립트 ########
-python main.py --config config_baseline.yaml --model FM --device mps
-python main.py --config config_baseline.yaml --model FFM --device mps
-python main.py --config config_baseline.yaml --model DeepFM --device mps
-python main.py --config config_baseline.yaml --model WDN --device mps
-python main.py --config config_baseline.yaml --model DCN --device mps
-python main.py --config config_baseline.yaml --model NCF --device mps
-python main.py --config config_baseline.yaml --model Image_FM --device mps
-python main.py --config config_baseline.yaml --model Image_DeepFM --device mps
-python main.py --config config_baseline.yaml --model Text_FM --device mps
-python main.py --config config_baseline.yaml --model Text_DeepFM --device mps
+# 예) $ bash run_baseline.sh
+# -c : --config / -m : --model / -w : --wandb / -r : --run_name
+python main.py  -c config/config_baseline.yaml  -m FM  -d mps  -w True  -r FM_baseline
+python main.py  -c config/config_baseline.yaml  -m FFM  -d mps  -w True  -r FFM_baseline
+python main.py  -c config/config_baseline.yaml  -m DeepFM  -d mps  -w True  -r DeepFM_baseline
+python main.py  -c config/config_baseline.yaml  -m WDN  -d mps  -w True  -r WDN_baseline
+python main.py  -c config/config_baseline.yaml  -m DCN  -d mps  -w True  -r DCN_baseline
+python main.py  -c config/config_baseline.yaml  -m NCF  -d mps  -w True  -r NCF_baseline
+python main.py  -c config/config_baseline.yaml  -m Image_FM  -d mps  -w True  -r Image_FM_baseline
+python main.py  -c config/config_baseline.yaml  -m Image_DeepFM  -d mps  -w True  -r Image_DeepFM_baseline
+python main.py  -c config/config_baseline.yaml  -m Text_FM  -d mps  -w True  -r Text_FM_baseline
+python main.py  -c config/config_baseline.yaml  -m Text_DeepFM  -d mps  -w True  -r Text_DeepFM_baseline
+
 
 ######## 추가 베이스라인 실행 스크립트 ########
-# # 텍스트 벡터를 새로 만들고자 할 경우
-# python main.py --config config.yaml --model Text_FM --vector_create True
-
-# # 학습 없이 saved_model을 불러와 추론만 하고자 할 경우
-# # 예) 저장된 파일명이 20240827_035641_Image_DeepFM.pt이고, configuration이 20240827_035641_Image_DeepFM.yaml에 저장되었다면,
-# python main.py --config 20240827_035641_Image_DeepFM.yaml --model Image_DeepFM  --predict True  --checkpoint  20240827_035641_Image_DeepFM.pt
+# # 학습 없이 저장된 모델을 불러와 추론만 하고자 할 경우
+# # 예) 저장된 파일명이 20240827_035641_Image_DeepFM_best.pt이고, 
+# #     configuration이 saved/log/20240827_035641_Image_DeepFM/config.yaml에 저장되었다면,
+# #     $ python main.py  -c saved/log/20240827_035641_Image_DeepFM/config.yaml  -m Image_DeepFM  --pred True  --ckpt 20240827_035641_Image_DeepFM_best.pt
+# #     로 실행하면 됩니다.
+# python main.py  -c saved/log/FM/config.yaml  -m FM  --pred True  --ckpt saved/checkpoint/FM_best.pt
 
 # # 앙상블 실행
-# # /submit/20240728_133605_NCF.csv 인 경우, `20240728_133605_NCF`만 작성해주면 됨
-# !python ensemble.py --ensemble_files 20240728_133228_Image_FM 20240728_133605_NCF --ensemble_strategy weighted --ensemble_weight 0.5,0.5
+# # saved/submit/20240728_133605_NCF.csv 인 경우, `20240728_133605_NCF`만 작성해주어야 함
+# # 예) Image_FM과 NCF를 균일하게 앙상블하고자 할 경우
+# python ensemble.py  --ensemble_files Image_FM_baseline,NCF_baseline
+# #    또는 가중치를 부여하고자 할 경우
+#!python ensemble.py  --ensemble_files Image_FM_baseline,NCF_baseline  --ensemble_strategy weighted  --ensemble_weight 0.5,0.5

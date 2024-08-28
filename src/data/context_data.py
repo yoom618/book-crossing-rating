@@ -1,5 +1,3 @@
-# DataLoader for FM, FFM
-
 import numpy as np
 import pandas as pd
 import regex
@@ -85,7 +83,7 @@ def process_context_data(users, books):
 
     # 데이터 전처리 (전처리는 각자의 상황에 맞게 진행해주세요!)
     books_['category'] = books_['category'].apply(lambda x: str2list(x)[0] if not pd.isna(x) else 'unknown')
-    books_['language'] = books_['language'].fillna(books_['language'].mode()[0])
+    books_['language'] = books_['language'].fillna(books_['language'].mean())
 
     users_['age_range'] = users_['age'].apply(lambda x: age_map(x) if not pd.isna(x) else 0)
 
@@ -93,7 +91,6 @@ def process_context_data(users, books):
     users_['location_country'] = users_['location_list'].apply(lambda x: x[0])
     users_['location_state'] = users_['location_list'].apply(lambda x: x[1] if len(x) > 1 else np.nan)
     users_['location_city'] = users_['location_list'].apply(lambda x: x[2] if len(x) > 2 else np.nan)
-
     for idx, row in users_.iterrows():
         if (not pd.isna(row['location_state'])) and pd.isna(row['location_country']):
             fill_country = users_[users_['location_state'] == row['location_state']]['location_country'].mode()
@@ -124,7 +121,7 @@ def context_data_load(args):
     """
     Parameters
     ----------
-    args.data_path : str
+    args.dataset.data_path : str
         데이터 경로를 설정할 수 있는 parser
     
     Returns
@@ -134,18 +131,19 @@ def context_data_load(args):
     """
 
     ######################## DATA LOAD
-    users = pd.read_csv(args.data_path + 'users.csv')
-    books = pd.read_csv(args.data_path + 'books.csv')
-    train = pd.read_csv(args.data_path + 'train_ratings.csv')
-    test = pd.read_csv(args.data_path + 'test_ratings.csv')
-    sub = pd.read_csv(args.data_path + 'sample_submission.csv')
+    users = pd.read_csv(args.dataset.data_path + 'users.csv')
+    books = pd.read_csv(args.dataset.data_path + 'books.csv')
+    train = pd.read_csv(args.dataset.data_path + 'train_ratings.csv')
+    test = pd.read_csv(args.dataset.data_path + 'test_ratings.csv')
+    sub = pd.read_csv(args.dataset.data_path + 'sample_submission.csv')
 
     users_, books_ = process_context_data(users, books)
     
     
-    # 사용할 컬럼을 여기서 선택합니다.
+    # 유저 및 책 정보를 합쳐서 데이터 프레임 생성
+    # 사용할 컬럼을 user_features와 book_features에 정의합니다. (단, 모두 범주형 데이터로 가정)
     user_features = ['age_range', 'location_country', 'location_state', 'location_city']
-    book_features = ['book_title', 'book_author', 'publisher', 'language', 'category']
+    book_features = ['book_author', 'publisher', 'language', 'category']
     features_col = list(set(['user_id', 'isbn'] + user_features + book_features))
 
     # 선택한 컬럼만 추출하여 데이터 조인
@@ -188,11 +186,13 @@ def context_data_loader(args, data):
     """
     Parameters
     ----------
-    args.batch_size : int
+    args.dataloader.batch_size : int
         데이터 batch에 사용할 데이터 사이즈
-    args.data_shuffle : bool
+    args.dataloader.shuffle : bool
         data shuffle 여부
-    args.test_size : float
+    args.dataloader.num_workers: int
+        dataloader에서 사용할 멀티프로세서 수
+    args.dataset.valid_ratio : float
         Train/Valid split 비율로, 0일 경우에 대한 처리를 위해 사용합니다.
     data : dict
         context_data_load 함수에서 반환된 데이터
@@ -204,12 +204,12 @@ def context_data_loader(args, data):
     """
 
     train_dataset = TensorDataset(torch.LongTensor(data['X_train'].values), torch.LongTensor(data['y_train'].values))
-    valid_dataset = TensorDataset(torch.LongTensor(data['X_valid'].values), torch.LongTensor(data['y_valid'].values)) if args.test_size != 0 else None
+    valid_dataset = TensorDataset(torch.LongTensor(data['X_valid'].values), torch.LongTensor(data['y_valid'].values)) if args.dataset.valid_ratio != 0 else None
     test_dataset = TensorDataset(torch.LongTensor(data['test'].values))
     
-    train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=args.data_shuffle)
-    valid_dataloader = DataLoader(valid_dataset, batch_size=args.batch_size, shuffle=args.data_shuffle) if args.test_size != 0 else None
-    test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
+    train_dataloader = DataLoader(train_dataset, batch_size=args.dataloader.batch_size, shuffle=args.dataloader.shuffle, num_workers=args.dataloader.num_workers)
+    valid_dataloader = DataLoader(valid_dataset, batch_size=args.dataloader.batch_size, shuffle=False, num_workers=args.dataloader.num_workers) if args.dataset.valid_ratio != 0 else None
+    test_dataloader = DataLoader(test_dataset, batch_size=args.dataloader.batch_size, shuffle=False, num_workers=args.dataloader.num_workers)
 
     data['train_dataloader'], data['valid_dataloader'], data['test_dataloader'] = train_dataloader, valid_dataloader, test_dataloader
 
