@@ -123,7 +123,7 @@ if __name__ == "__main__":
 
 
     ############### Image Parameter : Image_FM, Image_DeepFM
-    arg('--img_size', type=int, default=224, help='이미지 전처리 시 이미지 크기를 조정할 수 있습니다.')
+    arg('--img_size', type=int, default=64, help='이미지 전처리 시 이미지 크기를 조정할 수 있습니다.')
     arg('--kernel_size', type=int, default=3, help='CNN_Base를 활용하는 모델에서 CNN의 kernel 크기를 조정할 수 있습니다.')
     arg('--channel_list', type=list, default=[8, 16, 32], help='CNN_Base를 활용하는 모델에서 CNN의 채널 수를 조정할 수 있습니다.')
     arg('--stride', type=int, default=2, help='CNN_Base를 활용하는 모델에서 CNN의 stride 크기를 조정할 수 있습니다.')

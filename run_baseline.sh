@@ -1,14 +1,14 @@
 ######## 기본 베이스라인 실행 스크립트 ########
-python main.py --model FM --device mps
-python main.py --model FFM --device mps
-python main.py --model DeepFM --device mps
-python main.py --model WDN --device mps
-python main.py --model DCN --device mps
-python main.py --model NCF --device mps
-python main.py --model Image_FM --device mps --img_size 64
-python main.py --model Image_DeepFM --device mps --img_size 64
-python main.py --model Text_FM --device mps
-python main.py --model Text_DeepFM --device mps
+python main.py --model FM
+python main.py --model FFM
+python main.py --model DeepFM
+python main.py --model WDN
+python main.py --model DCN
+python main.py --model NCF
+python main.py --model Image_FM
+python main.py --model Image_DeepFM
+python main.py --model Text_FM
+python main.py --model Text_DeepFM
 
 ######## 추가 베이스라인 실행 스크립트 ########
 # # 텍스트 벡터를 새로 만들고자 할 경우
