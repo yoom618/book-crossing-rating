@@ -22,7 +22,7 @@ python main.py  -c config/config_baseline.yaml  -m Text_DeepFM  -d mps  -w True 
 # python main.py  -c saved/log/FM/config.yaml  -m FM  --pred True  --ckpt saved/checkpoint/FM_best.pt
 
 # # 앙상블 실행
-# # saved/submit/20240728_133605_NCF.csv 인 경우, `20240728_133605_NCF`만 작성해주어야 함
+# # saved/submit/20001231_235959_NCF.csv 인 경우, `20001231_235959_NCF`만 작성해주어야 함
 # # 예) Image_FM과 NCF를 균일하게 앙상블하고자 할 경우
 # python ensemble.py  --ensemble_files Image_FM_baseline,NCF_baseline
 # #    또는 가중치를 부여하고자 할 경우
