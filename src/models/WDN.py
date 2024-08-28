@@ -14,10 +14,12 @@ class WideAndDeep(nn.Module):
         self.linear = FeaturesLinear(self.field_dims)
         self.embedding = FeaturesEmbedding(self.field_dims, args.embed_dim)
         self.embed_output_dim = len(self.field_dims) * args.embed_dim
-        self.mlp = MLP_Base(self.embed_output_dim, args.mlp_dims, args.batchnorm, args.dropout)
+        self.mlp = MLP_Base(self.embed_output_dim, args.mlp_dims, args.batchnorm, args.dropout, output_layer=True)
 
 
     def forward(self, x: torch.Tensor):
         embed_x = self.embedding(x)
-        x = self.linear(x) + self.mlp(embed_x.view(-1, self.embed_output_dim))
-        return x.squeeze(1)
+        y_wide = self.linear(x).squeeze(1)
+        y_deep = self.mlp(embed_x.view(-1, self.embed_output_dim)).squeeze(1)
+
+        return y_wide + y_deep
