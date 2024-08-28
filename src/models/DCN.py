@@ -12,8 +12,20 @@ class CrossNetwork(nn.Module):
             nn.Linear(input_dim, 1, bias=False) for _ in range(num_layers)
         ])
         self.b = nn.ParameterList([
-            nn.Parameter(torch.zeros((input_dim,))) for _ in range(num_layers)
+            nn.Parameter(torch.empty((input_dim,))) for _ in range(num_layers)
         ])
+
+        self._initialize_weights()
+
+
+    def _initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.xavier_uniform_(m.weight.data)
+                if m.bias is not None:
+                    nn.init.constant_(m.bias.data, 0)
+            if isinstance(m, nn.Parameter):
+                nn.init.constant_(m, 0)
 
 
     def forward(self, x: torch.Tensor):
@@ -34,6 +46,19 @@ class DeepCrossNetwork(nn.Module):
         self.cn = CrossNetwork(self.embed_output_dim, args.cross_n_layers)
         self.mlp = MLP_Base(self.embed_output_dim, args.mlp_dims, args.batchnorm, args.dropout)
         self.cd_linear = nn.Linear(args.mlp_dims[-1], 1, bias=False)
+
+        self._initialize_weights()
+
+
+    def _initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.xavier_uniform_(m.weight.data)
+                if m.bias is not None:
+                    nn.init.constant_(m.bias.data, 0)
+
+            if isinstance(m, nn.Embedding):
+                nn.init.xavier_uniform_(m.weight.data)
 
 
     def forward(self, x: torch.Tensor):

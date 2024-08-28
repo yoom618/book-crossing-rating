@@ -33,6 +33,7 @@ class FFMLayer(nn.Module):
         for m in self.modules():
             if isinstance(m, nn.Embedding):
                 nn.init.xavier_uniform_(m.weight.data)
+                # nn.init.constant_(m.weight.data, 0)  # cold-start
 
 
     def forward(self, x: torch.Tensor):

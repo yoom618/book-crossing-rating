@@ -18,7 +18,7 @@ class FeaturesEmbedding(nn.Module):
         for m in self.modules():
             if isinstance(m, nn.Embedding):
                 nn.init.xavier_uniform_(m.weight.data)
-
+                # nn.init.constant_(m.weight.data, 0)  # cold-start
 
     def forward(self, x: torch.Tensor):
         x = x + x.new_tensor(self.offsets).unsqueeze(0)
@@ -46,6 +46,7 @@ class FeaturesLinear(nn.Module):
         for m in self.modules():
             if isinstance(m, nn.Embedding):
                 nn.init.xavier_uniform_(m.weight.data)
+                # nn.init.constant_(m.weight.data, 0)  # cold-start
             if isinstance(m, nn.Parameter):
                 nn.init.constant_(m, 0)
 
@@ -116,6 +117,18 @@ class MLP_Base(nn.Module):
         if output_layer:
             self.mlp.add_module('output', nn.Linear(input_dim, 1))
         
+        self._initialize_weights()
+
+
+    def _initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.xavier_uniform_(m.weight.data)
+                nn.init.constant_(m.bias.data, 0)
+            if isinstance(m, nn.BatchNorm1d):
+                nn.init.constant_(m.weight.data, 1)
+                nn.init.constant_(m.bias.data, 0)
+
 
     def forward(self, x):
         return self.mlp(x)
@@ -145,6 +158,18 @@ class CNN_Base(nn.Module):
                 self.cnn.add_module(f'maxpool{idx}', nn.MaxPool2d(kernel_size=2, stride=2))
 
         self.output_dim = self.compute_output_shape((1, *input_size))
+
+        self._initialize_weights()
+
+
+    def _initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_uniform_(m.weight.data, nonlinearity='relu')
+                nn.init.constant_(m.bias.data, 0)
+            if isinstance(m, nn.BatchNorm2d):
+                nn.init.constant_(m.weight.data, 1)
+                nn.init.constant_(m.bias.data, 0)
 
 
     def compute_output_shape(self, input_shape):
