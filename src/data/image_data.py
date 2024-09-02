@@ -1,6 +1,7 @@
 import pandas as pd
 from tqdm import tqdm
 from PIL import Image
+import numpy as np
 import torchvision.transforms as transforms
 import torch
 from torch.utils.data import DataLoader, Dataset
@@ -47,15 +48,17 @@ def image_vector(path, img_size):
     -------
     img_fe : np.ndarray
         이미지를 벡터화한 결과를 반환합니다.
-        베이스라인에서는 224 x 224 로 사이즈를 맞추고, grayscale일 경우 RGB로 변경합니다. => (3, 224, 224)
+        베이스라인에서는 grayscale일 경우 RGB로 변경한 뒤, img_size x img_size 로 사이즈를 맞추어 numpy로 반환합니다.
     """
     img = Image.open(path)
-    scale = transforms.Resize((img_size, img_size))
-    tensor = transforms.ToTensor()
-    gray2rgb = transforms.Lambda(lambda x: x.convert('RGB'))
-    img_fe = tensor(scale(gray2rgb(img)))
+    transform = transforms.Compose([
+        transforms.Lambda(lambda x: x.convert('RGB') if x.mode != 'RGB' else x),
+        transforms.Resize((img_size, img_size)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
 
-    return img_fe.numpy()
+    return transform(img).numpy()
 
 
 def process_img_data(books, args):
@@ -71,7 +74,7 @@ def process_img_data(books, args):
         이미지 정보를 벡터화하여 추가한 데이터 프레임을 반환합니다.
     """
     books_ = books.copy()
-    books_['img_path'] = books_['img_path'].apply(lambda x: 'data/'+x)
+    books_['img_path'] = books_['img_path'].apply(lambda x: f'data/{x}')
     img_vecs = []
     for idx in tqdm(books_.index):
         img_vec = image_vector(books_.loc[idx, 'img_path'], args.model_args[args.model].img_size)
