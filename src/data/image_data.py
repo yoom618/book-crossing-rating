@@ -1,8 +1,7 @@
 import pandas as pd
 from tqdm import tqdm
 from PIL import Image
-import numpy as np
-import torchvision.transforms as transforms
+from torchvision.transforms import v2
 import torch
 from torch.utils.data import DataLoader, Dataset
 from .basic_data import basic_data_split
@@ -51,11 +50,12 @@ def image_vector(path, img_size):
         베이스라인에서는 grayscale일 경우 RGB로 변경한 뒤, img_size x img_size 로 사이즈를 맞추어 numpy로 반환합니다.
     """
     img = Image.open(path)
-    transform = transforms.Compose([
-        transforms.Lambda(lambda x: x.convert('RGB') if x.mode != 'RGB' else x),
-        transforms.Resize((img_size, img_size)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    transform = v2.Compose([
+        v2.Lambda(lambda x: x.convert('RGB') if x.mode != 'RGB' else x),
+        v2.Resize((img_size, img_size)),
+        v2.ToImage(),
+        v2.ToDtype(torch.float32, scale=True),
+        v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
 
     return transform(img).numpy()
@@ -74,7 +74,8 @@ def process_img_data(books, args):
         이미지 정보를 벡터화하여 추가한 데이터 프레임을 반환합니다.
     """
     books_ = books.copy()
-    books_['img_path'] = books_['img_path'].apply(lambda x: f'data/{x}')
+    # books_['img_path'] = books_['img_path'].apply(lambda x: f'data/{x}')
+    books_['img_path'] = books_['img_path'].apply(lambda x: f'data/{x.replace("images/", "images_medium/").replace(".THUMBZZZ.jpg", ".MZZZZZZZ.jpg")}')
     img_vecs = []
     for idx in tqdm(books_.index):
         img_vec = image_vector(books_.loc[idx, 'img_path'], args.model_args[args.model].img_size)
