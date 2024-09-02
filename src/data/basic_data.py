@@ -24,19 +24,20 @@ def basic_data_load(args):
     sub = pd.read_csv(args.dataset.data_path + 'sample_submission.csv')
 
     all_df = pd.concat([train_df, test_df], axis=0)
+    
+    sparse_cols = ['user_id', 'isbn']
 
     # 라벨 인코딩하고 인덱스 정보를 저장
     label2idx, idx2label = {}, {}
-    for col in all_df.columns:
-        if col == 'rating':
-            continue
+    for col in sparse_cols:
+        all_df[col] = all_df[col].fillna('unknown')
         unique_labels = all_df[col].astype("category").cat.categories
         label2idx[col] = {label:idx for idx, label in enumerate(unique_labels)}
         idx2label[col] = {idx:label for idx, label in enumerate(unique_labels)}
         train_df[col] = train_df[col].astype("category").cat.codes
         test_df[col] = test_df[col].astype("category").cat.codes
 
-    field_dims = [len(label2idx[col]) for col in train_df.columns if col != 'rating']
+    field_dims = [len(label2idx[col]) for col in sparse_cols]
 
     data = {
             'train':train_df,

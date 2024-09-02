@@ -118,6 +118,7 @@ def process_text_data(ratings, users, books, tokenizer, model, vector_create=Fal
             read_books = books_[books_['isbn'].isin(books_read)][['book_title', 'summary', 'review_count']]
             read_books = read_books.sort_values('review_count', ascending=False).head(5)  # review_count가 높은 순으로 5개의 책을 선택
             # 유저에 대한 텍스트 프롬프트는 아래와 같이 구성됨
+            # DeepCoNN에서 유저의 리뷰를 요약하여 하나의 벡터로 만들어 사용함을 참고 (https://arxiv.org/abs/1701.04783)
             # '''
             # Five Books That You Read
             # 1. Book Title: {title}
@@ -224,29 +225,30 @@ def text_data_load(args):
     # 사용할 컬럼을 user_features와 book_features에 정의합니다. (단, 모두 범주형 데이터로 가정)
     user_features = []
     book_features = []
-    features_col = list(set(['user_id', 'isbn'] + user_features + book_features))  # unique한 feature들만 추출
+    sparse_cols = ['user_id', 'isbn'] + list(set(user_features + book_features) - {'user_id', 'isbn'})
     
-    train_df = train.merge(books_[book_features + ['isbn', 'book_summary_vector']], on='isbn', how='left')\
-                    .merge(users_[user_features + ['user_id', 'user_summary_merge_vector']], on='user_id', how='left')
-    test_df = test.merge(books_[book_features + ['isbn', 'book_summary_vector']], on='isbn', how='left')\
-                  .merge(users_[user_features + ['user_id', 'user_summary_merge_vector']], on='user_id', how='left')
+    train_df = train.merge(books_, on='isbn', how='left')\
+                    .merge(users_, on='user_id', how='left')[sparse_cols + ['user_summary_merge_vector', 'book_summary_vector', 'rating']]
+    test_df = test.merge(books_, on='isbn', how='left')\
+                  .merge(users_, on='user_id', how='left')[sparse_cols + ['user_summary_merge_vector', 'book_summary_vector']]
     all_df = pd.concat([train, test], axis=0)
 
     # feature_cols의 데이터만 라벨 인코딩하고 인덱스 정보를 저장
     label2idx, idx2label = {}, {}
-    for col in features_col:
+    for col in sparse_cols:
+        all_df[col] = all_df[col].fillna('unknown')
         unique_labels = all_df[col].astype("category").cat.categories
         label2idx[col] = {label:idx for idx, label in enumerate(unique_labels)}
         idx2label[col] = {idx:label for idx, label in enumerate(unique_labels)}
         train_df[col] = train_df[col].astype("category").cat.codes
         test_df[col] = test_df[col].astype("category").cat.codes
 
-    field_dims = [len(label2idx[col]) for col in features_col]
+    field_dims = [len(label2idx[col]) for col in sparse_cols]
 
     data = {
             'train':train_df,
-            'test':test_df.drop(['rating'], axis=1),
-            'field_names':features_col,
+            'test':test_df,
+            'field_names':sparse_cols,
             'field_dims':field_dims,
             'label2idx':label2idx,
             'idx2label':idx2label,

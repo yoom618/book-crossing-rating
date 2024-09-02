@@ -10,23 +10,6 @@ def str2list(x: str) -> list:
     return x[1:-1].split(', ')
 
 
-def age_map(x: int) -> int:
-    '''나이를 범주화하는 함수'''
-    x = int(x)
-    if x < 20:
-        return 1
-    elif x >= 20 and x < 30:
-        return 2
-    elif x >= 30 and x < 40:
-        return 3
-    elif x >= 40 and x < 50:
-        return 4
-    elif x >= 50 and x < 60:
-        return 5
-    else:
-        return 6
-    
-
 def split_location(x: str) -> list:
     '''
     Parameters
@@ -43,11 +26,11 @@ def split_location(x: str) -> list:
     res = x.split(',')
     res = [i.strip().lower() for i in res]
     res = [regex.sub(r'[^a-zA-Z/ ]', '', i) for i in res]  # remove special characters
-    res = [i if i not in ['n/a', ''] else np.nan for i in res]  # change 'n/a' into <NA>
+    res = [i if i not in ['n/a', ''] else np.nan for i in res]  # change 'n/a' into NaN
     res.reverse()  # reverse the list to get country, state, city, ... order
 
     for i in range(len(res)-1, 0, -1):
-        if res[i] in res[:i]:
+        if (res[i] in res[:i]) and (not pd.isna(res[i])):  # remove duplicated values if not NaN
             res.pop(i)
 
     return res
@@ -82,11 +65,12 @@ def process_context_data(users, books):
     books_ = books.copy()
 
     # 데이터 전처리 (전처리는 각자의 상황에 맞게 진행해주세요!)
-    books_['category'] = books_['category'].apply(lambda x: str2list(x)[0] if not pd.isna(x) else 'unknown')
+    books_['category'] = books_['category'].apply(lambda x: str2list(x)[0] if not pd.isna(x) else np.nan)
     books_['language'] = books_['language'].fillna(books_['language'].mode()[0])
+    books_['publication_range'] = books_['year_of_publication'].apply(lambda x: x // 10 * 10)  # 1990년대, 2000년대, 2010년대, ...
 
     users_['age'] = users_['age'].fillna(users_['age'].mode()[0])
-    users_['age_range'] = users_['age'].apply(lambda x: age_map(x))
+    users_['age_range'] = users_['age'].apply(lambda x: x // 10 * 10)  # 10대, 20대, 30대, ...
 
     users_['location_list'] = users_['location'].apply(lambda x: split_location(x)) 
     users_['location_country'] = users_['location_list'].apply(lambda x: x[0])
@@ -143,20 +127,24 @@ def context_data_load(args):
     
     # 유저 및 책 정보를 합쳐서 데이터 프레임 생성
     # 사용할 컬럼을 user_features와 book_features에 정의합니다. (단, 모두 범주형 데이터로 가정)
-    user_features = ['age_range', 'location_country', 'location_state', 'location_city']
-    book_features = ['book_author', 'publisher', 'language', 'category']
-    features_col = list(set(['user_id', 'isbn'] + user_features + book_features))
+    # 베이스라인에서는 가능한 모든 컬럼을 사용하도록 구성하였습니다.
+    # NCF를 사용할 경우, idx 0, 1은 각각 user_id, isbn이어야 합니다.
+    user_features = ['user_id', 'age_range', 'location_country', 'location_state', 'location_city']
+    book_features = ['isbn', 'book_title', 'book_author', 'publisher', 'language', 'category', 'publication_range']
+    sparse_cols = ['user_id', 'isbn'] + list(set(user_features + book_features) - {'user_id', 'isbn'}) if args.model == 'NCF' \
+                   else user_features + book_features
 
     # 선택한 컬럼만 추출하여 데이터 조인
-    train_df = train.merge(users_[user_features + ['user_id']], on='user_id', how='left')\
-                    .merge(books_[book_features + ['isbn']], on='isbn', how='left')
-    test_df = test.merge(users_[user_features + ['user_id']], on='user_id', how='left')\
-                  .merge(books_[book_features + ['isbn']], on='isbn', how='left')
+    train_df = train.merge(users_, on='user_id', how='left')\
+                    .merge(books_, on='isbn', how='left')[sparse_cols + ['rating']]
+    test_df = test.merge(users_, on='user_id', how='left')\
+                  .merge(books_, on='isbn', how='left')[sparse_cols]
     all_df = pd.concat([train_df, test_df], axis=0)
 
     # feature_cols의 데이터만 라벨 인코딩하고 인덱스 정보를 저장
     label2idx, idx2label = {}, {}
-    for col in features_col:
+    for col in sparse_cols:
+        all_df[col] = all_df[col].fillna('unknown')
         unique_labels = all_df[col].astype("category").cat.categories
         label2idx[col] = {label:idx for idx, label in enumerate(unique_labels)}
         idx2label[col] = {idx:label for idx, label in enumerate(unique_labels)}
@@ -167,8 +155,8 @@ def context_data_load(args):
 
     data = {
             'train':train_df,
-            'test':test_df.drop(['rating'], axis=1),
-            'field_names':features_col,
+            'test':test_df,
+            'field_names':sparse_cols,
             'field_dims':field_dims,
             'label2idx':label2idx,
             'idx2label':idx2label,

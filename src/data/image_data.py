@@ -109,29 +109,30 @@ def image_data_load(args):
     # 사용할 컬럼을 user_features와 book_features에 정의합니다. (단, 모두 범주형 데이터로 가정)
     user_features = []
     book_features = []
-    features_col = list(set(['user_id', 'isbn'] + user_features + book_features))  # unique한 feature들만 추출
+    sparse_cols = ['user_id', 'isbn'] + list(set(user_features + book_features) - {'user_id', 'isbn'})
 
-    train_df = train.merge(books_[book_features + ['isbn', 'img_vector']], on='isbn', how='left')\
-                    .merge(users[user_features + ['user_id']], on='user_id', how='left')
-    test_df = test.merge(books_[book_features + ['isbn', 'img_vector']], on='isbn', how='left')\
-                  .merge(users[user_features + ['user_id']], on='user_id', how='left')
+    train_df = train.merge(books_, on='isbn', how='left')\
+                    .merge(users, on='user_id', how='left')[sparse_cols + ['img_vector', 'rating']]
+    test_df = test.merge(books_, on='isbn', how='left')\
+                  .merge(users, on='user_id', how='left')[sparse_cols + ['img_vector']]
     all_df = pd.concat([train_df, test_df], axis=0)
 
     # feature_cols의 데이터만 라벨 인코딩하고 인덱스 정보를 저장
     label2idx, idx2label = {}, {}
-    for col in features_col:
+    for col in sparse_cols:
+        all_df[col] = all_df[col].fillna('unknown')
         unique_labels = all_df[col].astype("category").cat.categories
         label2idx[col] = {label:idx for idx, label in enumerate(unique_labels)}
         idx2label[col] = {idx:label for idx, label in enumerate(unique_labels)}
         train_df[col] = train_df[col].astype("category").cat.codes
         test_df[col] = test_df[col].astype("category").cat.codes
 
-    field_dims = [len(label2idx[col]) for col in features_col]
+    field_dims = [len(label2idx[col]) for col in sparse_cols]
 
     data = {
             'train':train_df,
-            'test':test_df.drop(['rating'], axis=1),
-            'field_names':features_col,
+            'test':test_df,
+            'field_names':sparse_cols,
             'field_dims':field_dims,
             'label2idx':label2idx,
             'idx2label':idx2label,
