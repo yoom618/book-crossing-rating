@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.nn import MSELoss, L1Loss as MAELoss
+from torch.nn import *
 
 class RMSELoss(nn.Module):
     def __init__(self):

@@ -1,8 +1,9 @@
-import os
 import argparse
 from omegaconf import OmegaConf
 import pandas as pd
 import torch
+import torch.optim as optimizer_module
+import torch.optim.lr_scheduler as scheduler_module
 from src.utils import Logger, Setting
 import src.data as data_module
 from src.train import train, test
@@ -28,11 +29,11 @@ def main(args, wandb=None):
 
     ####################### Setting for Log
     setting = Setting()
-
-    log_path = setting.get_log_path(args)
-
-    logger = Logger(args, log_path)
-    logger.save_args()
+    
+    if args.predict == False:
+        log_path = setting.get_log_path(args)
+        logger = Logger(args, log_path)
+        logger.save_args()
 
 
     ######################## Model
@@ -57,7 +58,7 @@ def main(args, wandb=None):
         print(f'--------------- {args.model} PREDICT ---------------')
         predicts = test(args, model, data, setting)
     else:
-        print(f'--------------- {args.checkpoint} PREDICT ---------------')
+        print(f'--------------- {args.model} PREDICT ---------------')
         predicts = test(args, model, data, setting, args.checkpoint)
 
 
@@ -67,6 +68,7 @@ def main(args, wandb=None):
     submission['rating'] = predicts
 
     filename = setting.get_submit_filename(args)
+    print(f'Save Predict: {filename}')
     submission.to_csv(filename, index=False)
 
 
@@ -89,6 +91,8 @@ if __name__ == "__main__":
     arg('--model', '-m', '--m', type=str, 
         choices=['FM', 'FFM', 'DeepFM', 'NCF', 'WDN', 'DCN', 'Image_FM', 'Image_DeepFM', 'Text_FM', 'Text_DeepFM'],
         help='학습 및 예측할 모델을 선택할 수 있습니다.')
+    arg('--seed', '-s', '--s', type=int,
+        help='데이터분할 및 모델 초기화 시 사용할 시드를 설정할 수 있습니다.')
     arg('--device', '-d', '--d', type=str, 
         choices=['cuda', 'cpu', 'mps'], help='사용할 디바이스를 선택할 수 있습니다.')
     arg('--wandb', '--w', '-w', type=bool, 
@@ -109,7 +113,29 @@ if __name__ == "__main__":
     for key in config_args.keys():
         if config_args[key] is not None:
             config_yaml[key] = config_args[key]
-    config_yaml.model_args = OmegaConf.create({config_yaml.model : config_yaml.model_args[config_yaml.model]})  # 사용되지 않는 model들의 정보 삭제
+    
+    # 사용되지 않는 정보 삭제 (학습 시에만)
+    if config_yaml.predict == False:
+        del config_yaml.checkpoint
+    
+        if config_yaml.wandb == False:
+            del config_yaml.wandb_project, config_yaml.run_name
+        
+        config_yaml.model_args = OmegaConf.create({config_yaml.model : config_yaml.model_args[config_yaml.model]})
+        
+        config_yaml.optimizer.args = {k: v for k, v in config_yaml.optimizer.args.items() 
+                                    if k in getattr(optimizer_module, config_yaml.optimizer.type).__init__.__code__.co_varnames}
+        
+        if config_yaml.lr_scheduler.use == False:
+            del config_yaml.lr_scheduler.type, config_yaml.lr_scheduler.args
+        else:
+            config_yaml.lr_scheduler.args = {k: v for k, v in config_yaml.lr_scheduler.args.items() 
+                                            if k in getattr(scheduler_module, config_yaml.lr_scheduler.type).__init__.__code__.co_varnames}
+        
+        if config_yaml.train.resume == False:
+            del config_yaml.train.resume_path
+
+    # # Configuration 콘솔에 출력
     # print(OmegaConf.to_yaml(config_yaml))
     
     ######################## W&B
@@ -123,6 +149,7 @@ if __name__ == "__main__":
                    notes=config_yaml.memo,
                    tags=[config_yaml.model],
                    resume="allow")
+        config_yaml.run_href = wandb.run.get_url()
 
         wandb.run.log_code("./src")  # src 내의 모든 파일을 업로드. Artifacts에서 확인 가능
 

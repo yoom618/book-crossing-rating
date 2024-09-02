@@ -1,16 +1,16 @@
 ######## 기본 베이스라인 실행 스크립트 ########
 # 예) $ bash run_baseline.sh
 # -c : --config / -m : --model / -w : --wandb / -r : --run_name
-python main.py  -c config/config_baseline.yaml  -m FM  -d mps  -w True  -r FM_baseline
-python main.py  -c config/config_baseline.yaml  -m FFM  -d mps  -w True  -r FFM_baseline
-python main.py  -c config/config_baseline.yaml  -m DeepFM  -d mps  -w True  -r DeepFM_baseline
-python main.py  -c config/config_baseline.yaml  -m WDN  -d mps  -w True  -r WDN_baseline
-python main.py  -c config/config_baseline.yaml  -m DCN  -d mps  -w True  -r DCN_baseline
-python main.py  -c config/config_baseline.yaml  -m NCF  -d mps  -w True  -r NCF_baseline
-python main.py  -c config/config_baseline.yaml  -m Image_FM  -d mps  -w True  -r Image_FM_baseline
-python main.py  -c config/config_baseline.yaml  -m Image_DeepFM  -d mps  -w True  -r Image_DeepFM_baseline
-python main.py  -c config/config_baseline.yaml  -m Text_FM  -d mps  -w True  -r Text_FM_baseline
-python main.py  -c config/config_baseline.yaml  -m Text_DeepFM  -d mps  -w True  -r Text_DeepFM_baseline
+python main.py  -c config/config_baseline.yaml  -m FM  -w True  -r FM_baseline
+python main.py  -c config/config_baseline.yaml  -m FFM  -w True  -r FFM_baseline
+python main.py  -c config/config_baseline.yaml  -m DeepFM  -w True  -r DeepFM_baseline
+python main.py  -c config/config_baseline.yaml  -m WDN  -w True  -r WDN_baseline
+python main.py  -c config/config_baseline.yaml  -m DCN  -w True  -r DCN_baseline
+python main.py  -c config/config_baseline.yaml  -m NCF  -w True  -r NCF_baseline
+python main.py  -c config/config_baseline.yaml  -m Image_FM  -w True  -r Image_FM_baseline
+python main.py  -c config/config_baseline.yaml  -m Image_DeepFM  -w True  -r Image_DeepFM_baseline
+python main.py  -c config/config_baseline.yaml  -m Text_FM  -w True  -r Text_FM_baseline
+python main.py  -c config/config_baseline.yaml  -m Text_DeepFM  -w True  -r Text_DeepFM_baseline
 
 
 ######## 추가 베이스라인 실행 스크립트 ########

@@ -75,8 +75,13 @@ class Setting:
         filename : submit file을 저장할 경로를 반환합니다.
         이 때, 파일명은 submit/날짜_시간_모델명.csv 입니다.
         '''
-        self.make_dir(args.train.save_dir.submit)
-        filename = os.path.join(args.train.save_dir.submit, f'{self.save_time}_{args.model}.csv')
+        if args.predict == False:
+            self.make_dir(args.train.save_dir.submit)
+            filename = os.path.join(args.train.save_dir.submit, f'{self.save_time}_{args.model}.csv')
+        else:
+            filename = os.path.basename(args.checkpoint)
+            filename = os.path.join(args.train.save_dir.submit, f'{filename}.csv')
+            
         return filename
 
     def make_dir(self,path):
