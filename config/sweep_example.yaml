@@ -10,7 +10,7 @@ project: book-rating-prediction
 method: bayes
 metric:
     goal: minimize
-    name: validation_loss
+    name: 'Valid RMSE'
 description: |-
     남겨둘 메모가 있다면 여기에.
     여러 줄로도 작성 가능
@@ -29,7 +29,7 @@ parameters:
     checkpoint:
         value: ''
     device:         # 가능한 값 : cpu, cuda, mps
-        value: mps
+        value: cuda
     model:          # 모델 선택
         value: FM
     wandb:          # wandb 사용 여부
