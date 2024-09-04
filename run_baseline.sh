@@ -26,4 +26,10 @@ python main.py  -c config/config_baseline.yaml  -m Text_DeepFM  -w True  -r Text
 # # 예) Image_FM과 NCF를 균일하게 앙상블하고자 할 경우
 # python ensemble.py  --ensemble_files Image_FM_baseline,NCF_baseline
 # #    또는 가중치를 부여하고자 할 경우
-#!python ensemble.py  --ensemble_files Image_FM_baseline,NCF_baseline  --ensemble_strategy weighted  --ensemble_weight 0.5,0.5
+# python ensemble.py  --ensemble_files Image_FM_baseline,NCF_baseline  --ensemble_strategy weighted  --ensemble_weight 0.5,0.5
+
+# # sweep 실행
+# # 예) sweep_example.yaml로 sweep을 실행하고자 할 경우
+# wandb sweep config/sweep_example.yaml
+# # 를 실행하면 생성되는 SWEEP_ID를 아래와 같이 wandb agent에 넣어주어 실행 (ex. userid/book-rating/sweep_id)
+# wandb agent SWEEP_ID

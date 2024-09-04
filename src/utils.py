@@ -58,7 +58,7 @@ class Setting:
         path : log file을 저장할 경로를 반환합니다.
         이 때, 경로는 saved/log/날짜_시간_모델명/ 입니다.
         '''
-        path = os.path.join(args.train.save_dir.log, f'{self.save_time}_{args.model}/')
+        path = os.path.join(args.train.log_dir, f'{self.save_time}_{args.model}/')
         self.make_dir(path)
         
         return path
@@ -76,11 +76,11 @@ class Setting:
         이 때, 파일명은 submit/날짜_시간_모델명.csv 입니다.
         '''
         if args.predict == False:
-            self.make_dir(args.train.save_dir.submit)
-            filename = os.path.join(args.train.save_dir.submit, f'{self.save_time}_{args.model}.csv')
+            self.make_dir(args.train.submit_dir)
+            filename = os.path.join(args.train.submit_dir, f'{self.save_time}_{args.model}.csv')
         else:
             filename = os.path.basename(args.checkpoint)
-            filename = os.path.join(args.train.save_dir.submit, f'{filename}.csv')
+            filename = os.path.join(args.train.submit_dir, f'{filename}.csv')
             
         return filename
 

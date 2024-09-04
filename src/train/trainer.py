@@ -86,11 +86,11 @@ def train(args, model, dataloader, logger, setting):
             best_loss = valid_loss if args.dataset.valid_ratio != 0 else train_loss
             if minimum_loss > best_loss:
                 minimum_loss = best_loss
-                os.makedirs(args.train.save_dir.checkpoint, exist_ok=True)
-                torch.save(model.state_dict(), f'{args.train.save_dir.checkpoint}/{setting.save_time}_{args.model}_best.pt')
+                os.makedirs(args.train.ckpt_dir, exist_ok=True)
+                torch.save(model.state_dict(), f'{args.train.ckpt_dir}/{setting.save_time}_{args.model}_best.pt')
         else:
-            os.makedirs(args.train.save_dir.checkpoint, exist_ok=True)
-            torch.save(model.state_dict(), f'{args.train.save_dir.checkpoint}/{setting.save_time}_{args.model}_e{epoch:02}.pt')
+            os.makedirs(args.train.ckpt_dir, exist_ok=True)
+            torch.save(model.state_dict(), f'{args.train.ckpt_dir}/{setting.save_time}_{args.model}_e{epoch:02}.pt')
     
     logger.close()
     
@@ -121,7 +121,7 @@ def test(args, model, dataloader, setting, checkpoint=None):
         model.load_state_dict(torch.load(checkpoint, weights_only=True))
     else:
         if args.train.save_best_model:
-            model_path = f'{args.train.save_dir.checkpoint}/{setting.save_time}_{args.model}_best.pt'
+            model_path = f'{args.train.ckpt_dir}/{setting.save_time}_{args.model}_best.pt'
         else:
             # best가 아닐 경우 마지막 에폭으로 테스트하도록 함
             model_path = f'{args.train.save_dir.checkpoint}/{setting.save_time}_{args.model}_e{args.train.epochs-1:02d}.pt'

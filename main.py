@@ -1,4 +1,5 @@
 import argparse
+import ast
 from omegaconf import OmegaConf
 import pandas as pd
 import torch
@@ -80,11 +81,12 @@ if __name__ == "__main__":
     
 
     arg = parser.add_argument
+    str2dict = lambda x: {k:int(v) for k,v in (i.split(':') for i in x.split(','))}
 
     # add basic arguments (no default value)
     arg('--config', '-c', '--c', type=str, 
         help='Configuration 파일을 설정합니다.', required=True)
-    arg('--predict', '-p', '--p', '--pred', type=bool, 
+    arg('--predict', '-p', '--p', '--pred', type=ast.literal_eval, 
         help='학습을 생략할지 여부를 설정할 수 있습니다.')
     arg('--checkpoint', '-ckpt', '--ckpt', type=str, 
         help='학습을 생략할 때 사용할 모델을 설정할 수 있습니다. 단, 하이퍼파라미터 세팅을 모두 정확하게 입력해야 합니다.')
@@ -95,19 +97,28 @@ if __name__ == "__main__":
         help='데이터분할 및 모델 초기화 시 사용할 시드를 설정할 수 있습니다.')
     arg('--device', '-d', '--d', type=str, 
         choices=['cuda', 'cpu', 'mps'], help='사용할 디바이스를 선택할 수 있습니다.')
-    arg('--wandb', '--w', '-w', type=bool, 
+    arg('--wandb', '--w', '-w', type=ast.literal_eval, 
         help='wandb를 사용할지 여부를 설정할 수 있습니다.')
     arg('--wandb_project', '--wp', '-wp', type=str,
         help='wandb 프로젝트 이름을 설정할 수 있습니다.')
     arg('--run_name', '--rn', '-rn', '--r', '-r', type=str,
         help='wandb에서 사용할 run 이름을 설정할 수 있습니다.')
+    arg('--model_args', '--ma', '-ma', type=ast.literal_eval)
+    arg('--dataloader', '--dl', '-dl', type=ast.literal_eval)
+    arg('--dataset', '--dset', '-dset', type=ast.literal_eval)
+    arg('--optimizer', '-opt', '--opt', type=ast.literal_eval)
+    arg('--loss', '-l', '--l', type=str)
+    arg('--lr_scheduler', '-lr', '--lr', type=ast.literal_eval)
+    arg('--metrics', '-met', '--met', type=ast.literal_eval)
+    arg('--train', '-t', '--t', type=ast.literal_eval)
+
     
     args = parser.parse_args()
 
 
     ######################## Config with yaml
     config_args = OmegaConf.create(vars(args))
-    config_yaml = OmegaConf.load(args.config)
+    config_yaml = OmegaConf.load(args.config) if args.config else OmegaConf.create()
 
     # args에 있는 값이 config_yaml에 있는 값보다 우선함. (단, None이 아닌 값일 경우)
     for key in config_args.keys():
@@ -135,8 +146,8 @@ if __name__ == "__main__":
         if config_yaml.train.resume == False:
             del config_yaml.train.resume_path
 
-    # # Configuration 콘솔에 출력
-    # print(OmegaConf.to_yaml(config_yaml))
+    # Configuration 콘솔에 출력
+    print(OmegaConf.to_yaml(config_yaml))
     
     ######################## W&B
     if args.wandb:
@@ -146,7 +157,7 @@ if __name__ == "__main__":
         wandb.init(project=config_yaml.wandb_project, 
                    config=OmegaConf.to_container(config_yaml, resolve=True),
                    name=config_yaml.run_name if config_yaml.run_name else None,
-                   notes=config_yaml.memo,
+                   notes=config_yaml.memo if hasattr(config_yaml, 'memo') else None,
                    tags=[config_yaml.model],
                    resume="allow")
         config_yaml.run_href = wandb.run.get_url()

@@ -10,12 +10,12 @@ memo: |-
 # 아래의 일곱 항목들은 argparser로 받은 인자를 우선적으로 사용합니다.
 #   $ python main.py --config config.yaml --seed 2024
 #   과 같이 실행할 경우 seed는 0이 아닌 2024로 설정됩니다.
-predict: false  # 예측할 경우 true로 설정
+predict: False  # 예측할 경우 True로 설정
 checkpoint: 'saved/checkpoints/FM_best.pt'   # 예측 시 불러올 모델 경로
 seed: 0         # 시드 고정
 device: cuda    # 가능한 값 : cpu, cuda, mps
 model: FM       # 모델 선택
-wandb: false                            # wandb 사용 여부
+wandb: False                            # wandb 사용 여부
 wandb_project: 'book-rating-prediction' # wandb 프로젝트 이름
 run_name: ''                            # wandb 실행 이름. 빈 문자열일 경우 자동 생성
 
@@ -31,26 +31,26 @@ model_args:     # model에 해당하는 파라미터만 실질적으로 사용�
         datatype: context   # basic, context, image, text 중 basic, context 가능
         embed_dim: 16       # sparse 벡터를 임베딩할 차원
         mlp_dims: [16, 32]  # MLP_Base의 히든 레이어 차원
-        batchnorm: true    # MLP_Base에서 배치 정규화 사용 여부
+        batchnorm: True    # MLP_Base에서 배치 정규화 사용 여부
         dropout: 0.2        # MLP_Base에서 드롭아웃 비율
     WDN:
         datatype: context   # basic, context, image, text 중 basic, context 가능
         embed_dim: 16       # sparse 벡터를 임베딩할 차원
         mlp_dims: [16, 32]  # MLP_Base의 히든 레이어 차원
-        batchnorm: true    # MLP_Base에서 배치 정규화 사용 여부
+        batchnorm: True    # MLP_Base에서 배치 정규화 사용 여부
         dropout: 0.2        # MLP_Base에서 드롭아웃 비율
     NCF:
         datatype: context   # basic, context, image, text 중 basic, context 가능
         embed_dim: 16       # sparse 벡터를 임베딩할 차원
         mlp_dims: [16, 32]  # MLP_Base의 히든 레이어 차원
-        batchnorm: true    # MLP_Base에서 배치 정규화 사용 여부
+        batchnorm: True    # MLP_Base에서 배치 정규화 사용 여부
         dropout: 0.2        # MLP_Base에서 드롭아웃 비율
     DCN:
         datatype: context   # basic, context, image, text 중 basic, context 가능
         embed_dim: 16       # sparse 벡터를 임베딩할 차원
         cross_layer_num: 3  # Cross Network의 레이어 수
         mlp_dims: [16, 32]  # MLP_Base의 히든 레이어 차원
-        batchnorm: true    # MLP_Base에서 배치 정규화 사용 여부
+        batchnorm: True    # MLP_Base에서 배치 정규화 사용 여부
         dropout: 0.2        # MLP_Base에서 드롭아웃 비율
     Image_FM:
         datatype: image     # basic, context, image, text 중 image 가능
@@ -60,7 +60,7 @@ model_args:     # model에 해당하는 파라미터만 실질적으로 사용�
         channel_list: [8, 16, 32]   # CNN_Base에서 사용할 각 레이어의 채널 수
         stride: 2                   # CNN_Base에서 사용할 각 레이어의 스트라이드
         padding: 1                  # CNN_Base에서 사용할 각 레이어의 패딩
-        cnn_batchnorm: true        # CNN_Base에서 배치 정규화 사용 여부
+        cnn_batchnorm: True        # CNN_Base에서 배치 정규화 사용 여부
         cnn_dropout: 0.2            # CNN_Base에서 드롭아웃 비율
     Image_DeepFM:
         datatype: image     # basic, context, image, text 중 image 가능
@@ -70,25 +70,25 @@ model_args:     # model에 해당하는 파라미터만 실질적으로 사용�
         channel_list: [8, 16, 32]   # CNN_Base에서 사용할 각 레이어의 채널 수
         stride: 2                   # CNN_Base에서 사용할 각 레이어의 스트라이드
         padding: 1                  # CNN_Base에서 사용할 각 레이어의 패딩
-        cnn_batchnorm: true        # CNN_Base에서 배치 정규화 사용 여부
+        cnn_batchnorm: True        # CNN_Base에서 배치 정규화 사용 여부
         cnn_dropout: 0.2            # CNN_Base에서 드롭아웃 비율
         mlp_dims: [16, 32]          # MLP_Base의 히든 레이어 차원
-        batchnorm: true        # MLP_Base에서 배치 정규화 사용 여부
+        batchnorm: True        # MLP_Base에서 배치 정규화 사용 여부
         dropout: 0.2            # MLP_Base에서 드롭아웃 비율
     Text_FM:
         datatype: text      # basic, context, image, text 중 text 가능
-        vector_create: false    # True: BERT를 통해 임베딩 벡터 생성 / False: 기존에 만든 벡터 사용
+        vector_create: False    # True: BERT를 통해 임베딩 벡터 생성 / False: 기존에 만든 벡터 사용
         embed_dim: 16           # sparse 벡터를 임베딩할 차원
         pretrained_model: 'bert-base-uncased'   # 텍스트 임베딩에 사용할 사전학습 모델
         word_dim: 768                           # 사전학습 모델을 통해 생성된 임베딩 벡터 차원
     Text_DeepFM:
         datatype: text      # basic, context, image, text 중 text 가능
-        vector_create: false    # True: BERT를 통해 임베딩 벡터 생성 / False: 기존에 만든 벡터 사용
+        vector_create: False    # True: BERT를 통해 임베딩 벡터 생성 / False: 기존에 만든 벡터 사용
         embed_dim: 16           # sparse 벡터를 임베딩할 차원
         pretrained_model: 'bert-base-uncased'   # 텍스트 임베딩에 사용할 사전학습 모델
         word_dim: 768                           # 사전학습 모델을 통해 생성된 임베딩 벡터 차원
         mlp_dims: [16, 32]      # MLP_Base의 히든 레이어 차원
-        batchnorm: true    # MLP_Base에서 배치 정규화 사용 여부
+        batchnorm: True    # MLP_Base에서 배치 정규화 사용 여부
         dropout: 0.2        # MLP_Base에서 드롭아웃 비율
 
 
@@ -98,7 +98,7 @@ dataset:
 
 dataloader:
     batch_size: 1024    # 배치 사이즈
-    shuffle: true       # 학습 데이터 셔플 여부
+    shuffle: True       # 학습 데이터 셔플 여부
     num_workers: 0      # 멀티프로세서 수. 0: 메인프로세서만 사용
 
 optimizer:
@@ -106,12 +106,12 @@ optimizer:
     args:           # 사용하고자 하는 클래스의 파라미터를 참고하여 추가해주시면 되며, 관계가 없는 파라미터는 무시됩니다.
         lr: 5e-3            # 예) 모든 옵티마이저에서 사용되는 학습률
         weight_decay: 1e-4  # 예) Adam 등 / L2 정규화 가중치
-        amsgrad: false      # 예) Adam 등 / amsgrad 사용 여부
+        amsgrad: False      # 예) Adam 등 / amsgrad 사용 여부
 
 loss: RMSELoss          # 직접 정의한 loss 클래스 또는 torch.nn.Module 클래스 (https://pytorch.org/docs/stable/nn.html#loss-functions)
 
 lr_scheduler:
-    use: false                  # True: 사용 / False: 사용하지 않음 (단, valid_ratio가 0일 경우 validation set이 없어 사용 불가)
+    use: False                  # True: 사용 / False: 사용하지 않음 (단, valid_ratio가 0일 경우 validation set이 없어 사용 불가)
     type: ReduceLROnPlateau     # 사용가능한 lr_scheduler: torch.optim.lr_scheduler 클래스 (https://pytorch.org/docs/stable/optim.html#how-to-adjust-learning-rate)
     args:                       # 사용하고자 하는 클래스의 파라미터를 참고하여 추가해주시면 되며, 관계가 없는 파라미터는 무시됩니다.
         mode: 'min'             # 예) ReduceLROnPlateau / 'min' 또는 'max'
@@ -123,10 +123,9 @@ metrics: [ MSELoss, MAELoss, RMSELoss ]  # 평가 지표. 직접 정의한 loss 
 
 train:
     epochs: 20                          # 학습 에폭 수
-    save_dir: 
-        log: saved/log                  # 로그 저장 경로
-        checkpoint: saved/checkpoint    # 모델 저장 경로
-        submit: saved/submit            # 예측 저장 경로
-    save_best_model: true               # True: val_loss가 최소인 모델 저장 / False: 모든 모델 저장
-    resume: false                               # 이어서 학습할 경우 true
+    log_dir: saved/log                  # 로그 저장 경로
+    ckpt_dir: saved/checkpoint    # 모델 저장 경로
+    submit_dir: saved/submit            # 예측 저장 경로
+    save_best_model: True               # True: val_loss가 최소인 모델 저장 / False: 모든 모델 저장
+    resume: False                               # 이어서 학습할 경우 True
     resume_path: saved/checkpoint/FM_best.pt    # 이어서 학습할 모델 경로
