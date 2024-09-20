@@ -3,3 +3,4 @@ scikit-learn
 transformers
 omegaconf
 wandb
+nltk

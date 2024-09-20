@@ -145,17 +145,19 @@ class ResNet_DeepFM(nn.Module):
 
         # 이미지 feature를 resnet을 통해 임베딩하는 부분
         self.resnet = torch.hub.load('pytorch/vision:v0.9.0', 'resnet18', pretrained=True)
+        # in_features를 미리 저장해둠
+        in_features = self.resnet.fc.in_features
         self.resnet.fc = nn.Identity()
         
         # resnet을 통해 임베딩된 이미지 벡터가 fm에 사용될 수 있도록 embed_dim 크기로 변환하는 부분
-        self.resnet_embedding = nn.Linear(self.resnet.fc.in_features, args.embed_dim)
+        self.resnet_embedding = nn.Linear(in_features, args.embed_dim)
         
         # dense feature 사이의 상호작용을 효율적으로 계산하는 부분
         self.fm = FMLayer_Dense()
 
         # deep network를 통해 dense feature를 학습하는 부분
         self.deep = MLP_Base(
-                             input_dim=(args.embed_dim * len(self.field_dims)) + self.resnet.fc.in_features,
+                             input_dim=(args.embed_dim * len(self.field_dims)) + in_features,
                              embed_dims=args.mlp_dims,
                              batchnorm=args.batchnorm,
                              dropout=args.dropout,

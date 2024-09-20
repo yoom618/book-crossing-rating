@@ -11,6 +11,7 @@ python main.py  -c config/config_baseline.yaml  -m Image_FM  -w True  -r Image_F
 python main.py  -c config/config_baseline.yaml  -m Image_DeepFM  -w True  -r Image_DeepFM_baseline
 python main.py  -c config/config_baseline.yaml  -m Text_FM  -w True  -r Text_FM_baseline
 python main.py  -c config/config_baseline.yaml  -m Text_DeepFM  -w True  -r Text_DeepFM_baseline
+python main.py  -c config/config_baseline.yaml  -m ResNet_DeepFM  -w True  -r ResNet_DeepFM_baseline
 
 
 ######## 추가 베이스라인 실행 스크립트 ########

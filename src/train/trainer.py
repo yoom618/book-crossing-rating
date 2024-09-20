@@ -17,7 +17,7 @@ def train(args, model, dataloader, logger, setting):
     if args.wandb:
         import wandb
     
-    minimum_loss = 999999999
+    minimum_loss = None
 
     loss_fn = getattr(loss_module, args.loss)().to(args.device)
     args.metrics = sorted([metric for metric in set(args.metrics) if metric != args.loss])
@@ -34,11 +34,11 @@ def train(args, model, dataloader, logger, setting):
     else:
         lr_scheduler = None
 
-    for epoch in tqdm(range(args.train.epochs)):
+    for epoch in range(args.train.epochs):
         model.train()
         total_loss, train_len = 0, len(dataloader['train_dataloader'])
 
-        for data in dataloader['train_dataloader']:
+        for data in tqdm(dataloader['train_dataloader'], desc=f'[Epoch {epoch+1:02d}/{args.train.epochs:02d}]'):
             if args.model_args[args.model].datatype == 'image':
                 x, y = [data['user_book_vector'].to(args.device), data['img_vector'].to(args.device)], data['rating'].to(args.device)
             elif args.model_args[args.model].datatype == 'text':
@@ -55,12 +55,12 @@ def train(args, model, dataloader, logger, setting):
         if args.lr_scheduler.use and args.lr_scheduler.type != 'ReduceLROnPlateau':
             lr_scheduler.step()
         
-        msg = f'[Epoch {epoch+1:02d}/{args.train.epochs:02d}]'
+        msg = ''
         train_loss = total_loss / train_len
-        msg += f'\nTrain Loss ({METRIC_NAMES[args.loss]}): {train_loss:.3f}'
+        msg += f'\tTrain Loss ({METRIC_NAMES[args.loss]}): {train_loss:.3f}'
         if args.dataset.valid_ratio != 0:  # valid 데이터가 존재할 경우
             valid_loss = valid(args, model, dataloader['valid_dataloader'], loss_fn)
-            msg += f'\nValid Loss ({METRIC_NAMES[args.loss]}): {valid_loss:.3f}'
+            msg += f'\n\tValid Loss ({METRIC_NAMES[args.loss]}): {valid_loss:.3f}'
             if args.lr_scheduler.use and args.lr_scheduler.type == 'ReduceLROnPlateau':
                 lr_scheduler.step(valid_loss)
             
@@ -84,7 +84,7 @@ def train(args, model, dataloader, logger, setting):
         
         if args.train.save_best_model:
             best_loss = valid_loss if args.dataset.valid_ratio != 0 else train_loss
-            if minimum_loss > best_loss:
+            if minimum_loss is None or minimum_loss > best_loss:
                 minimum_loss = best_loss
                 os.makedirs(args.train.ckpt_dir, exist_ok=True)
                 torch.save(model.state_dict(), f'{args.train.ckpt_dir}/{setting.save_time}_{args.model}_best.pt')

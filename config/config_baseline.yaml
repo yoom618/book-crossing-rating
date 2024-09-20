@@ -75,6 +75,13 @@ model_args:     # model에 해당하는 파라미터만 실질적으로 사용�
         mlp_dims: [16, 32]          # MLP_Base의 히든 레이어 차원
         batchnorm: True        # MLP_Base에서 배치 정규화 사용 여부
         dropout: 0.2            # MLP_Base에서 드롭아웃 비율
+    ResNet_DeepFM:
+        datatype: image     # basic, context, image, text 중 image 가능
+        embed_dim: 16       # sparse 벡터 및 이미지 벡터를 임베딩할 차원
+        img_size: 64        # 이미지 전처리를 통해 조정할 이미지 크기 (64 -> 3x64x64)
+        mlp_dims: [16, 32]          # MLP_Base의 히든 레이어 차원
+        batchnorm: True        # MLP_Base에서 배치 정규화 사용 여부
+        dropout: 0.2            # MLP_Base에서 드롭아웃 비율
     Text_FM:
         datatype: text      # basic, context, image, text 중 text 가능
         vector_create: False    # True: BERT를 통해 임베딩 벡터 생성 / False: 기존에 만든 벡터 사용
