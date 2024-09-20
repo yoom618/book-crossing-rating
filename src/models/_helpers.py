@@ -102,11 +102,11 @@ class FMLayer_Sparse(nn.Module):
 # 기본적인 형태의 MLP를 구현합니다.
 # 사용되는 모델 : DeepFM, Image_DeepFM, Text_DeepFM, WDN, DCN, NCF
 class MLP_Base(nn.Module):
-    def __init__(self, input_dim, embed_dims, 
+    def __init__(self, input_dim, hidden_dims, 
                  batchnorm=True, dropout=0.2, output_layer=False):
         super().__init__()
         self.mlp = nn.Sequential()
-        for idx, embed_dim in enumerate(embed_dims):
+        for idx, embed_dim in enumerate(hidden_dims):
             self.mlp.add_module(f'linear{idx}', nn.Linear(input_dim, embed_dim))
             if batchnorm:
                 self.mlp.add_module(f'batchnorm{idx}', nn.BatchNorm1d(embed_dim))
@@ -124,9 +124,6 @@ class MLP_Base(nn.Module):
         for m in self.modules():
             if isinstance(m, nn.Linear):
                 nn.init.xavier_uniform_(m.weight.data)
-                nn.init.constant_(m.bias.data, 0)
-            if isinstance(m, nn.BatchNorm1d):
-                nn.init.constant_(m.weight.data, 1)
                 nn.init.constant_(m.bias.data, 0)
 
 
@@ -166,9 +163,6 @@ class CNN_Base(nn.Module):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_uniform_(m.weight.data, nonlinearity='relu')
-                nn.init.constant_(m.bias.data, 0)
-            if isinstance(m, nn.BatchNorm2d):
-                nn.init.constant_(m.weight.data, 1)
                 nn.init.constant_(m.bias.data, 0)
 
 

@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from ._helpers import FeaturesLinear, FMLayer_Sparse, MLP_Base
+from ._helpers import FeaturesLinear, FMLayer_Sparse
 
     
 
